@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Tipprunde</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0F1417">
+<style>
+  /* ===== Config ===== */
+</style>
+<script>
+  // ====== KONFIGURATION ======
+  // Erwartet eine Datei "data.json" im selben Ordner wie diese Seite (im selben GitHub-Repo).
+  const DATA_URL = "./data.json";
+  // ===========================
+</script>
+<style>
+  :root{
+    --bg:#0F1417; --bg-elevated:#151B1F; --card:#1A2126; --line:#2A343B;
+    --text:#EEF1F0; --muted:#8B9AA3; --accent:#FFB238; --accent-soft:#4A3A1C;
+    --win:#3FA35A; --win-soft:#16281C; --loss:#E4572E; --loss-soft:#2C1913; --pending:#586570;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom);}
+  .display{font-family:'Barlow Condensed',sans-serif;letter-spacing:0.02em;text-transform:uppercase;}
+  #app{max-width:1100px;margin:0 auto;padding:20px 16px 80px;}
+  .scoreboard{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap;}
+  .scoreboard h1{font-size:15px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin:0 0 2px;}
+  .scoreboard .sub{font-size:13px;color:var(--muted);}
+  .tabs{display:flex;gap:6px;background:var(--bg-elevated);border:1px solid var(--line);border-radius:999px;padding:4px;}
+  .tab{padding:7px 16px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border:none;background:transparent;font-family:inherit;}
+  .tab.active{background:var(--accent);color:#1a1305;}
+  .md-nav{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap;}
+  .md-nav select{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-family:monospace;font-size:14px;}
+  .md-badge{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--line);font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--accent);}
+  .game{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
+  .game-head{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+  .rank-badge{font-family:monospace;font-size:11px;color:var(--muted);background:var(--bg-elevated);border:1px solid var(--line);border-radius:6px;padding:3px 7px;}
+  .teams{display:flex;align-items:center;gap:8px;flex:1;min-width:200px;font-size:15px;font-weight:600;}
+  .vs{color:var(--muted);font-size:12px;}
+  .player-chip{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:5px 12px;letter-spacing:.03em;white-space:nowrap;}
+  .game-body{padding:14px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;}
+  .bet-desc{font-size:13px;color:var(--muted);}
+  .bet-desc b{color:var(--text);}
+  .score-disp{font-family:monospace;font-size:20px;font-weight:700;}
+  .result-pill{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;border-radius:8px;padding:8px 14px;text-align:center;min-width:110px;}
+  .result-pending{background:var(--bg-elevated);color:var(--pending);border:1px dashed var(--line);}
+  .result-win{background:var(--win-soft);color:var(--win);}
+  .result-loss{background:var(--loss-soft);color:var(--loss);}
+  .live-tag{font-size:10px;color:var(--win);border:1px solid var(--win);border-radius:5px;padding:1px 5px;margin-left:6px;}
+  .summary{background:var(--bg-elevated);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-top:18px;}
+  .summary h3{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;}
+  .summary-item{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 10px;}
+  .summary-item .name{font-size:12px;color:var(--muted);}
+  .summary-item .val{font-family:monospace;font-weight:700;font-size:16px;margin-top:2px;}
+  .val.pos{color:var(--win);} .val.neg{color:var(--loss);} .val.zero{color:var(--muted);}
+  .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);}
+  table.season{border-collapse:collapse;width:100%;font-size:13px;}
+  table.season th, table.season td{padding:9px 12px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap;}
+  table.season th{background:var(--bg-elevated);color:var(--muted);font-weight:600;text-transform:uppercase;font-size:11px;}
+  table.season td.player-name{text-align:left;font-weight:700;font-family:'Barlow Condensed',sans-serif;font-size:15px;background:var(--card);position:sticky;left:0;}
+  table.season th.player-col{text-align:left;position:sticky;left:0;background:var(--bg-elevated);}
+  table.season td.total{font-family:monospace;font-weight:700;background:var(--card);}
+  .empty-state{color:var(--muted);font-size:14px;padding:30px 10px;text-align:center;border:1px dashed var(--line);border-radius:var(--radius);}
+  .error-box{background:var(--loss-soft);border:1px solid var(--loss);color:var(--text);border-radius:var(--radius);padding:16px;font-size:14px;}
+  .status-line{font-size:12px;color:var(--muted);margin-bottom:14px;}
+</style>
+</head>
+<body>
+<div id="app">Lädt…</div>
+<script>
+const BASE_ORDER = ["Tino","Spani","Muc","Julian","Malte","Markus","Michi","Thomas"];
+const STAKE = 2;
+const BET_TYPES = {'1x2':'1X2','dc':'Doppelte Chance','ou':'Über/Unter','btts':'Beide treffen','hc':'Handicap','htft':'HZ/Endstand','free':'Freitext'};
+const SEASON_BET_TYPES = {'meister':'Deutscher Meister','top4':'Top 4','top6':'Top 6','top10':'Top 10','klassenerhalt':'Klassenerhalt','abstieg':'Absteiger','free':'Freitext'};
+
+let state = null;
+let currentTab = 'matchday';
+let currentMdIndex = 0;
+let liveScores = {}; // rank -> {home,away} overlay for currently viewed matchday
+
+function computeResult(game){
+  const b = game.bet, s = game.score;
+  if(b.type === 'free') return b.manualResult;
+  if(s.home === null || s.home === '' || s.away === null || s.away === '') return null;
+  const h = Number(s.home), a = Number(s.away);
+  if(!b.type || !b.selection) return null;
+  if(b.type === '1x2'){ const out = h>a?'Heim':(h<a?'Auswärts':'Unentschieden'); return b.selection===out?'win':'loss'; }
+  if(b.type === 'dc'){ const out = h>a?'Heim':(h<a?'Auswärts':'Unentschieden'); const map={'1X':['Heim','Unentschieden'],'12':['Heim','Auswärts'],'X2':['Unentschieden','Auswärts']}; return (map[b.selection]||[]).includes(out)?'win':'loss'; }
+  if(b.type === 'ou'){ const total=h+a, line=Number(b.line); if(total===line) return null; if(b.selection==='Über') return total>line?'win':'loss'; if(b.selection==='Unter') return total<line?'win':'loss'; return null; }
+  if(b.type === 'btts'){ const both = h>0 && a>0; return (b.selection==='Ja')===both?'win':'loss'; }
+  if(b.type === 'hc'){ const val=Number(b.hcValue); let adjH=h, adjA=a; if(b.hcTeam==='Heim') adjH+=val; else adjA+=val; if(adjH===adjA) return null; const winner=adjH>adjA?'Heim':'Auswärts'; return winner===b.hcTeam?'win':'loss'; }
+  if(b.type === 'htft'){ if(s.htHome===null||s.htHome===''||s.htAway===null||s.htAway==='') return null; const hh=Number(s.htHome), ha=Number(s.htAway); const htOut=hh>ha?'Heim':(hh<ha?'Auswärts':'X'); const ftOut=h>a?'Heim':(h<a?'Auswärts':'X'); return b.selection===(htOut+'/'+ftOut)?'win':'loss'; }
+  return null;
+}
+
+function gameProfit(game){
+  const res = computeResult(game);
+  if(res==='win'){ const q=Number(game.bet.quote); if(!q) return null; return Math.round((q*STAKE-STAKE)*100)/100; }
+  if(res==='loss') return game.rank===1 ? 0 : -STAKE;
+  return null;
+}
+
+function matchdayTotals(md){
+  const totals={}; BASE_ORDER.forEach(p=>totals[p]=0);
+  md.games.forEach(g=>{ const p=gameProfit(g); if(p!==null) totals[g.player]+=p; });
+  return totals;
+}
+
+function seasonBetProfit(bet){
+  if(!bet || !bet.manualResult) return null;
+  if(bet.manualResult==='win'){ const q=Number(bet.quote); if(!q) return null; return Math.round((q*STAKE-STAKE)*100)/100; }
+  if(bet.manualResult==='loss') return -STAKE;
+  return null;
+}
+
+function seasonTotals(){
+  const totals={}; BASE_ORDER.forEach(p=>totals[p]=0);
+  const perMd=[];
+  state.matchdays.forEach(md=>{ const t=matchdayTotals(md); perMd.push(t); Object.keys(t).forEach(p=>totals[p]+=t[p]); });
+  const sb={};
+  BASE_ORDER.forEach(p=>{ const sp=seasonBetProfit(state.seasonBets[p]); sb[p]=sp; if(sp!==null) totals[p]+=sp; });
+  return {totals, perMd, sb};
+}
+
+function fmtEuro(v){ if(v===null||v===undefined) return '–'; const sign=v>0?'+':''; return sign+v.toFixed(2).replace('.',',')+' €'; }
+
+function el(tag, attrs, children){
+  const e = document.createElement(tag);
+  if(attrs) Object.keys(attrs).forEach(k=>{
+    if(attrs[k]===null||attrs[k]===undefined) return;
+    if(k==='class') e.className = attrs[k];
+    else if(k.startsWith('on')) e.addEventListener(k.slice(2), attrs[k]);
+    else e.setAttribute(k, attrs[k]);
+  });
+  (children||[]).forEach(c=>{ if(c!=null) e.appendChild(typeof c==='string'?document.createTextNode(c):c); });
+  return e;
+}
+
+function normalizeTeam(s){
+  if(!s) return '';
+  const stripWords=['1','fc','sv','sc','tsg','vfb','vfl','fsv','borussia','sg','spvgg','04','05','07','1899','ev'];
+  let n = s.toLowerCase().replace(/[.,]/g,' ');
+  return n.split(/\s+/).filter(w=>w && !stripWords.includes(w)).join(' ').trim();
+}
+function teamsMatch(a,b){ const na=normalizeTeam(a), nb=normalizeTeam(b); if(!na||!nb) return false; return na===nb||na.includes(nb)||nb.includes(na); }
+
+async function loadData(){
+  const app = document.getElementById('app');
+  try{
+    const res = await fetch(DATA_URL + '?t=' + Date.now(), {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    state = await res.json();
+    if(!state.matchdays) throw new Error('Ungültiges Datenformat');
+    currentMdIndex = state.matchdays.length - 1;
+    render();
+    fetchLiveScores();
+  }catch(e){
+    app.innerHTML = '';
+    app.appendChild(el('div',{class:'error-box'},[
+      'Konnte data.json nicht laden. (' + e.message + ') Ist die Datei im Repo vorhanden? Seite neu laden hilft manchmal auch.'
+    ]));
+  }
+}
+
+async function fetchLiveScores(){
+  if(!state || !state.matchdays.length) return;
+  const md = state.matchdays[currentMdIndex];
+  try{
+    const url = `https://api.openligadb.de/getmatchdata/bl1/${state.seasonYear||2026}/${md.nr}`;
+    const res = await fetch(url);
+    if(!res.ok) return;
+    const data = await res.json();
+    liveScores = {};
+    data.forEach(m=>{
+      const homeApi = m.team1 && m.team1.teamName, awayApi = m.team2 && m.team2.teamName;
+      if(!homeApi||!awayApi) return;
+      const g = md.games.find(gm=> teamsMatch(gm.home,homeApi) && teamsMatch(gm.away,awayApi));
+      if(!g) return;
+      if(m.matchResults && m.matchResults.length){
+        const final = m.matchResults.find(r=>r.resultTypeID===2) || m.matchResults[m.matchResults.length-1];
+        if(final) liveScores[g.rank] = {home: final.pointsTeam1, away: final.pointsTeam2, finished: m.matchIsFinished};
+      }
+    });
+    render();
+  }catch(e){ /* still zeigen wir die Sheet-Daten, still fail */ }
+}
+
+function displayScore(game){
+  const live = liveScores[game.rank];
+  if(live && (game.score.home===null || game.score.home==='')) return {home:live.home, away:live.away, isLive:!live.finished};
+  return {home:game.score.home, away:game.score.away, isLive:false};
+}
+
+function betDescription(game){
+  const b = game.bet;
+  if(!b.type) return 'Noch keine Wette eingetragen';
+  const label = BET_TYPES[b.type] || b.type;
+  if(b.type==='free') return (b.freitext||'—') + ' · ' + label;
+  if(b.type==='ou') return label + ' ' + b.line + ' · ' + b.selection;
+  if(b.type==='hc') return label + ' ' + b.hcTeam + ' ' + b.hcValue;
+  return label + ' · ' + b.selection;
+}
+
+function renderHeader(){
+  const wrap = el('div',{class:'scoreboard'});
+  wrap.appendChild(el('div',{},[ el('h1',{},['Tipprunde']), el('div',{class:'sub'},['Live-Übersicht · nur Lesen']) ]));
+  const tabs = el('div',{class:'tabs'},[
+    el('button',{class:'tab'+(currentTab==='matchday'?' active':''), onclick:()=>{currentTab='matchday'; render();}},['Spieltag']),
+    el('button',{class:'tab'+(currentTab==='seasonbets'?' active':''), onclick:()=>{currentTab='seasonbets'; render();}},['Saisonwetten']),
+    el('button',{class:'tab'+(currentTab==='season'?' active':''), onclick:()=>{currentTab='season'; render();}},['Saison'])
+  ]);
+  wrap.appendChild(tabs);
+  return wrap;
+}
+
+function renderGame(game){
+  const card = el('div',{class:'game'});
+  const head = el('div',{class:'game-head'},[
+    el('span',{class:'rank-badge'},['#'+game.rank]),
+    game.rank===1 ? el('span',{class:'rank-badge', style:'color:var(--accent);border-color:var(--accent-soft);'},['Bonus · kostenlos']) : null,
+    el('div',{class:'teams'},[ el('span',{},[game.home||'?']), el('span',{class:'vs'},['–']), el('span',{},[game.away||'?']) ]),
+    el('span',{class:'player-chip'},[game.player])
+  ]);
+  card.appendChild(head);
+
+  const body = el('div',{class:'game-body'});
+  const left = el('div',{});
+  left.appendChild(el('div',{class:'bet-desc'},[betDescription(game)]));
+  if(game.bet.type && game.bet.type!=='free' && game.bet.quote) left.appendChild(el('div',{class:'bet-desc'},['Quote: ', el('b',{},[String(game.bet.quote)])]));
+  body.appendChild(left);
+
+  const sc = displayScore(game);
+  const mid = el('div',{class:'score-disp'},[ (sc.home??'–') + ' : ' + (sc.away??'–'), sc.isLive ? el('span',{class:'live-tag'},['LIVE']) : null ]);
+  body.appendChild(mid);
+
+  const res = computeResult(game), profit = gameProfit(game);
+  let pillClass='result-pending', label='Offen';
+  if(res==='win'){ pillClass='result-win'; label='Gewonnen · '+fmtEuro(profit); }
+  else if(res==='loss'){ pillClass='result-loss'; label='Verloren · '+fmtEuro(profit); }
+  body.appendChild(el('div',{class:'result-pill '+pillClass},[label]));
+
+  card.appendChild(body);
+  return card;
+}
+
+function renderMatchdaySummary(md){
+  const totals = matchdayTotals(md);
+  const box = el('div',{class:'summary'});
+  box.appendChild(el('h3',{},['Spieltag '+md.nr]));
+  const grid = el('div',{class:'summary-grid'});
+  BASE_ORDER.forEach(p=>{
+    const v = totals[p], cls = v>0?'pos':(v<0?'neg':'zero');
+    grid.appendChild(el('div',{class:'summary-item'},[ el('div',{class:'name'},[p]), el('div',{class:'val '+cls},[fmtEuro(v)]) ]));
+  });
+  box.appendChild(grid);
+  return box;
+}
+
+function renderMatchdayView(){
+  const wrap = el('div',{});
+  const md = state.matchdays[currentMdIndex];
+  const nav = el('div',{class:'md-nav'});
+  nav.appendChild(el('div',{class:'md-badge'},[String(md.nr)]));
+  const select = el('select',{onchange:(e)=>{ currentMdIndex=Number(e.target.value); liveScores={}; render(); fetchLiveScores(); }});
+  state.matchdays.forEach((m,i)=> select.appendChild(el('option',{value:i, ...(i===currentMdIndex?{selected:'selected'}:{})},['Spieltag '+m.nr+(m.closed?' ✓':'')])) );
+  nav.appendChild(select);
+  wrap.appendChild(nav);
+  md.games.forEach(g=> wrap.appendChild(renderGame(g)));
+  wrap.appendChild(renderMatchdaySummary(md));
+  return wrap;
+}
+
+function renderSeasonBetsView(){
+  const wrap = el('div',{});
+  wrap.appendChild(el('div',{class:'status-line'},['Saisonwette Bundesliga '+ (state.seasonYear||2026) +'/'+String((state.seasonYear||2026)+1).slice(2)+' – ein Tipp pro Mitspieler.']));
+  BASE_ORDER.forEach(p=>{
+    const bet = state.seasonBets[p] || {};
+    const card = el('div',{class:'game'});
+    card.appendChild(el('div',{class:'game-head'},[ el('span',{class:'player-chip'},[p]) ]));
+    const body = el('div',{class:'game-body'});
+    const label = bet.type ? (SEASON_BET_TYPES[bet.type]||bet.type) : 'Noch keine Wette';
+    const detail = bet.type==='free' ? (bet.freitext||'—') : (bet.team||'—');
+    body.appendChild(el('div',{class:'bet-desc'},[bet.type ? (detail+' · '+label+(bet.quote?(' · Quote '+bet.quote):'')) : label]));
+    const profit = seasonBetProfit(bet);
+    let pillClass='result-pending', resLabel='Offen';
+    if(bet.manualResult==='win'){ pillClass='result-win'; resLabel='Gewonnen · '+fmtEuro(profit); }
+    else if(bet.manualResult==='loss'){ pillClass='result-loss'; resLabel='Verloren · '+fmtEuro(profit); }
+    body.appendChild(el('div',{class:'result-pill '+pillClass},[resLabel]));
+    card.appendChild(body);
+    wrap.appendChild(card);
+  });
+  return wrap;
+}
+
+function renderSeasonView(){
+  const wrap = el('div',{});
+  if(!state.matchdays.length){ wrap.appendChild(el('div',{class:'empty-state'},['Noch keine Spieltage.'])); return wrap; }
+  const {totals, perMd, sb} = seasonTotals();
+  const ranked = BASE_ORDER.slice().sort((a,b)=>totals[b]-totals[a]);
+  const tableWrap = el('div',{class:'table-wrap'});
+  const table = el('table',{class:'season'});
+  const headRow = el('tr',{},[ el('th',{class:'player-col'},['Spieler']) ]);
+  state.matchdays.forEach(md=> headRow.appendChild(el('th',{},['ST '+md.nr])) );
+  headRow.appendChild(el('th',{},['Saisonwette']));
+  headRow.appendChild(el('th',{},['Gesamt']));
+  table.appendChild(el('thead',{},[headRow]));
+  const tbody = el('tbody',{});
+  ranked.forEach(p=>{
+    const row = el('tr',{},[ el('td',{class:'player-name'},[p]) ]);
+    perMd.forEach(t=>{ const v=t[p], cls=v>0?'pos':(v<0?'neg':'zero'); row.appendChild(el('td',{class:cls},[fmtEuro(v)])); });
+    const sbv = sb[p], sbCls = sbv==null?'':(sbv>0?'pos':(sbv<0?'neg':'zero'));
+    row.appendChild(el('td',{class:sbCls},[sbv==null?'–':fmtEuro(sbv)]));
+    const tv=totals[p], tcls=tv>0?'pos':(tv<0?'neg':'zero');
+    row.appendChild(el('td',{class:'total '+tcls},[fmtEuro(tv)]));
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+  tableWrap.appendChild(table);
+  wrap.appendChild(tableWrap);
+  return wrap;
+}
+
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  app.appendChild(renderHeader());
+  if(currentTab==='matchday') app.appendChild(renderMatchdayView());
+  else if(currentTab==='seasonbets') app.appendChild(renderSeasonBetsView());
+  else app.appendChild(renderSeasonView());
+}
+
+loadData();
+</script>
+</body>
+</html>
