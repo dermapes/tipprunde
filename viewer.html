@@ -319,7 +319,7 @@ function renderSeasonBetsView(){
 function renderSeasonChart(){
   const {totals, perMd, sb} = seasonTotals();
   
-  // Berechne kumulative Summen für jeden Spieler über alle Spieltage
+  // Berechne kumulative Summen für jeden Spieler über alle Spieltage (OHNE Saisonwette)
   const datasets = [];
   BASE_ORDER.forEach(player => {
     const data = [];
@@ -328,11 +328,6 @@ function renderSeasonChart(){
       cumulative += md[player] || 0;
       data.push(cumulative);
     });
-    // Füge Saisonwette am Ende hinzu
-    if(sb[player] && sb[player] !== null) {
-      cumulative += sb[player];
-    }
-    data.push(cumulative);
     
     datasets.push({
       label: player,
@@ -351,7 +346,6 @@ function renderSeasonChart(){
   });
 
   const labels = state.matchdays.map(md => 'Spieltag ' + md.nr);
-  labels.push('Gesamt');
 
   return {datasets, labels};
 }
@@ -397,7 +391,7 @@ function renderSeasonView(){
           },
           tooltip: {
             backgroundColor: 'var(--card)',
-            titleColor: 'var(--accent)',
+            titleColor: 'var(--text)',
             bodyColor: 'var(--text)',
             borderColor: 'var(--line)',
             borderWidth: 1,
