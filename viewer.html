@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0F1417">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 <style>
   /* ===== Config ===== */
 </style>
@@ -37,13 +38,13 @@
   .tab.active{background:var(--accent);color:#1a1305;}
   .md-nav{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap;}
   .md-nav select{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-family:monospace;font-size:14px;}
-  .md-badge{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--line);font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--accent);}
+  .md-badge{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--line);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;}
   .game{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
   .game-head{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
   .rank-badge{font-family:monospace;font-size:11px;color:var(--muted);background:var(--bg-elevated);border:1px solid var(--line);border-radius:6px;padding:3px 7px;}
   .teams{display:flex;align-items:center;gap:8px;flex:1;min-width:200px;font-size:15px;font-weight:600;}
   .vs{color:var(--muted);font-size:12px;}
-  .player-chip{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:5px 12px;letter-spacing:.03em;white-space:nowrap;}
+  .player-chip{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:5px 12px;letter-spacing:.03em;}
   .game-body{padding:14px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;}
   .bet-desc{font-size:13px;color:var(--muted);}
   .bet-desc b{color:var(--text);}
@@ -70,6 +71,8 @@
   .empty-state{color:var(--muted);font-size:14px;padding:30px 10px;text-align:center;border:1px dashed var(--line);border-radius:var(--radius);}
   .error-box{background:var(--loss-soft);border:1px solid var(--loss);color:var(--text);border-radius:var(--radius);padding:16px;font-size:14px;}
   .status-line{font-size:12px;color:var(--muted);margin-bottom:14px;}
+  .chart-container{background:var(--bg-elevated);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:20px;position:relative;height:350px;}
+  .chart-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px;}
 </style>
 </head>
 <body>
@@ -80,10 +83,23 @@ const STAKE = 2;
 const BET_TYPES = {'1x2':'1X2','dc':'Doppelte Chance','ou':'Über/Unter','btts':'Beide treffen','hc':'Handicap','htft':'HZ/Endstand','free':'Freitext'};
 const SEASON_BET_TYPES = {'meister':'Deutscher Meister','top4':'Top 4','top6':'Top 6','top10':'Top 10','klassenerhalt':'Klassenerhalt','abstieg':'Absteiger','free':'Freitext'};
 
+// Farben für die Spieler
+const PLAYER_COLORS = {
+  'Tino': '#FF6B6B',
+  'Spani': '#4ECDC4',
+  'Muc': '#FFE66D',
+  'Julian': '#95E1D3',
+  'Malte': '#F38181',
+  'Markus': '#AA96DA',
+  'Michi': '#FCBAD3',
+  'Thomas': '#A8D8EA'
+};
+
 let state = null;
 let currentTab = 'matchday';
 let currentMdIndex = 0;
 let liveScores = {}; // rank -> {home,away} overlay for currently viewed matchday
+let chartInstance = null;
 
 function computeResult(game){
   const b = game.bet, s = game.score;
@@ -93,10 +109,10 @@ function computeResult(game){
   if(!b.type || !b.selection) return null;
   if(b.type === '1x2'){ const out = h>a?'Heim':(h<a?'Auswärts':'Unentschieden'); return b.selection===out?'win':'loss'; }
   if(b.type === 'dc'){ const out = h>a?'Heim':(h<a?'Auswärts':'Unentschieden'); const map={'1X':['Heim','Unentschieden'],'12':['Heim','Auswärts'],'X2':['Unentschieden','Auswärts']}; return (map[b.selection]||[]).includes(out)?'win':'loss'; }
-  if(b.type === 'ou'){ const total=h+a, line=Number(b.line); if(total===line) return null; if(b.selection==='Über') return total>line?'win':'loss'; if(b.selection==='Unter') return total<line?'win':'loss'; return null; }
+  if(b.type === 'ou'){ const total=h+a, line=Number(b.line); if(total===line) return null; if(b.selection==='Über') return total>line?'win':'loss'; if(b.selection==='Unter') return total<line?'win':'loss'; }
   if(b.type === 'btts'){ const both = h>0 && a>0; return (b.selection==='Ja')===both?'win':'loss'; }
-  if(b.type === 'hc'){ const val=Number(b.hcValue); let adjH=h, adjA=a; if(b.hcTeam==='Heim') adjH+=val; else adjA+=val; if(adjH===adjA) return null; const winner=adjH>adjA?'Heim':'Auswärts'; return winner===b.hcTeam?'win':'loss'; }
-  if(b.type === 'htft'){ if(s.htHome===null||s.htHome===''||s.htAway===null||s.htAway==='') return null; const hh=Number(s.htHome), ha=Number(s.htAway); const htOut=hh>ha?'Heim':(hh<ha?'Auswärts':'X'); const ftOut=h>a?'Heim':(h<a?'Auswärts':'X'); return b.selection===(htOut+'/'+ftOut)?'win':'loss'; }
+  if(b.type === 'hc'){ const val=Number(b.hcValue); let adjH=h, adjA=a; if(b.hcTeam==='Heim') adjH+=val; else adjA+=val; if(adjH===adjA) return null; const winner=adjH>adjA?'Heim':'Auswärts'; return b.selection===winner?'win':'loss'; }
+  if(b.type === 'htft'){ if(s.htHome===null||s.htHome===''||s.htAway===null||s.htAway==='') return null; const hh=Number(s.htHome), ha=Number(s.htAway); const htOut=hh>ha?'Heim':(hh<ha?'Auswärts':'Unentschieden'); const ftOut = h>a?'Heim':(h<a?'Auswärts':'Unentschieden'); return (b.selection||'').includes(htOut) && (b.selection||'').includes(ftOut)?'win':'loss'; }
   return null;
 }
 
@@ -299,9 +315,120 @@ function renderSeasonBetsView(){
   return wrap;
 }
 
+function renderSeasonChart(){
+  const {totals, perMd, sb} = seasonTotals();
+  
+  // Berechne kumulative Summen für jeden Spieler über alle Spieltage
+  const datasets = [];
+  BASE_ORDER.forEach(player => {
+    const data = [];
+    let cumulative = 0;
+    perMd.forEach(md => {
+      cumulative += md[player] || 0;
+      data.push(cumulative);
+    });
+    // Füge Saisonwette am Ende hinzu
+    if(sb[player] && sb[player] !== null) {
+      cumulative += sb[player];
+    }
+    data.push(cumulative);
+    
+    datasets.push({
+      label: player,
+      data: data,
+      borderColor: PLAYER_COLORS[player],
+      backgroundColor: PLAYER_COLORS[player] + '15',
+      borderWidth: 2,
+      tension: 0.4,
+      pointRadius: 5,
+      pointBackgroundColor: PLAYER_COLORS[player],
+      pointBorderColor: 'var(--bg)',
+      pointBorderWidth: 2,
+      fill: false
+    });
+  });
+
+  const labels = state.matchdays.map(md => 'ST ' + md.nr);
+  labels.push('Gesamt');
+
+  return {datasets, labels};
+}
+
 function renderSeasonView(){
   const wrap = el('div',{});
   if(!state.matchdays.length){ wrap.appendChild(el('div',{class:'empty-state'},['Noch keine Spieltage.'])); return wrap; }
+  
+  // Render Chart
+  const chartDiv = el('div',{class:'chart-container'});
+  chartDiv.appendChild(el('div',{class:'chart-title'},['Gesamtgewinn über den Saisenverlauf']));
+  const canvasWrap = el('div',{style:'position:relative;height:300px;'});
+  const canvas = el('canvas',{});
+  canvasWrap.appendChild(canvas);
+  chartDiv.appendChild(canvasWrap);
+  wrap.appendChild(chartDiv);
+  
+  // Chart später rendern, nachdem das Element im DOM ist
+  setTimeout(()=>{
+    const {datasets, labels} = renderSeasonChart();
+    if(chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: datasets
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: {
+              color: 'var(--text)',
+              font: {family: "'Inter', sans-serif", size: 12},
+              padding: 12
+            }
+          },
+          tooltip: {
+            backgroundColor: 'var(--card)',
+            titleColor: 'var(--text)',
+            bodyColor: 'var(--text)',
+            borderColor: 'var(--line)',
+            borderWidth: 1,
+            padding: 8,
+            titleFont: {size: 13, weight: 'bold'},
+            bodyFont: {size: 12},
+            callbacks: {
+              label: function(context) {
+                const val = context.parsed.y;
+                const sign = val > 0 ? '+' : '';
+                return context.dataset.label + ': ' + sign + val.toFixed(2).replace('.',',') + ' €';
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {color: 'var(--muted)', font: {size: 11}},
+            grid: {color: 'var(--line)', drawBorder: false},
+            border: {display: false}
+          },
+          y: {
+            ticks: {
+              color: 'var(--muted)',
+              font: {size: 11},
+              callback: function(value) {
+                return (value > 0 ? '+' : '') + value.toFixed(2).replace('.',',') + '€';
+              }
+            },
+            grid: {color: 'var(--line)', drawBorder: false},
+            border: {display: false}
+          }
+        }
+      }
+    });
+  }, 10);
+
+  // Render Table
   const {totals, perMd, sb} = seasonTotals();
   const ranked = BASE_ORDER.slice().sort((a,b)=>totals[b]-totals[a]);
   const tableWrap = el('div',{class:'table-wrap'});
