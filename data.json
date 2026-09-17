@@ -352,7 +352,7 @@
             "hcTeam": "Heim",
             "hcValue": -1,
             "freitext": "Schießt Edin Dzeko ein Tor? Ja",
-            "manualResult": "loss",
+            "manualResult": null,
             "voided": true
           },
           "score": {
