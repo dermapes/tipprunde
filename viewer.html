@@ -85,6 +85,7 @@
     .status-pill {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 8px;
       background: var(--accent-soft);
       color: var(--accent);
@@ -95,6 +96,7 @@
       font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
+      min-height: 32px;
     }
 
     .status-pill::before {
@@ -104,6 +106,17 @@
       border-radius: 50%;
       background: currentColor;
       box-shadow: 0 0 12px currentColor;
+      flex-shrink: 0;
+    }
+
+    .status-pill.offline {
+      background: rgba(242,109,91,0.1);
+      color: #f26d5b;
+      border-color: rgba(242,109,91,0.28);
+    }
+
+    .status-pill.offline::before {
+      box-shadow: 0 0 12px #f26d5b;
     }
 
     .tabs {
@@ -230,6 +243,12 @@
       background: var(--live-soft);
       color: var(--live);
       border-color: rgba(114,210,255,0.2);
+    }
+
+    .tag.live.offline {
+      background: rgba(242,109,91,0.12);
+      color: #f26d5b;
+      border-color: rgba(242,109,91,0.2);
     }
 
     .tag.closed {
@@ -506,6 +525,7 @@
     let chartInstance = null;
     let liveRefreshTimer = null;
     let currentTab = 'overview';
+    let hasLiveConnection = false;
 
     function fmtEuro(value) {
       if (value === null || value === undefined || Number.isNaN(Number(value))) return '–';
@@ -549,12 +569,15 @@
       return Number.isFinite(parsed) ? parsed : null;
     }
 
-    function getBetProfit(game) {
-      const meta = evaluateBet(game, game.score && game.score.home !== null && game.score.home !== '' && game.score.away !== null && game.score.away !== '' ? Number(game.score.home) : null, game.score && game.score.home !== null && game.score.home !== '' && game.score.away !== null && game.score.away !== '' ? Number(game.score.away) : null);
-      return meta.profit;
-    }
-
     function getActualScoreForGame(game, liveList = []) {
+      if (!liveList || !Array.isArray(liveList) || liveList.length === 0) {
+        // Keine Live-Daten verfügbar, nutze data.json
+        if (game.score && game.score.home !== null && game.score.home !== '' && game.score.away !== null && game.score.away !== '') {
+          return { home: Number(game.score.home), away: Number(game.score.away) };
+        }
+        return null;
+      }
+
       const liveMatch = liveList.find(match => {
         const a = normalizeTeamName(match.Team1 && match.Team1.TeamName ? match.Team1.TeamName : match.team1 && match.team1.teamName ? match.team1.teamName : '');
         const b = normalizeTeamName(match.Team2 && match.Team2.TeamName ? match.Team2.TeamName : match.team2 && match.team2.teamName ? match.team2.teamName : '');
@@ -563,7 +586,13 @@
         return (a === ga && b === gb) || (a === gb && b === ga);
       });
 
-      if (!liveMatch) return null;
+      if (!liveMatch) {
+        // Kein Match in Live-Daten gefunden, nutze data.json
+        if (game.score && game.score.home !== null && game.score.home !== '' && game.score.away !== null && game.score.away !== '') {
+          return { home: Number(game.score.home), away: Number(game.score.away) };
+        }
+        return null;
+      }
 
       const pointsT1 =
         liveMatch.GoalsTeam1 ??
@@ -575,7 +604,13 @@
         liveMatch.goalsTeam2 ??
         (Array.isArray(liveMatch.MatchResults) && liveMatch.MatchResults.length ? Number(liveMatch.MatchResults[0].PointsTeam2) : null);
 
-      if (pointsT1 === null || pointsT2 === null || Number.isNaN(Number(pointsT1)) || Number.isNaN(Number(pointsT2))) return null;
+      if (pointsT1 === null || pointsT2 === null || Number.isNaN(Number(pointsT1)) || Number.isNaN(Number(pointsT2))) {
+        // Live-API konnte Werte nicht geben, nutze data.json
+        if (game.score && game.score.home !== null && game.score.home !== '' && game.score.away !== null && game.score.away !== '') {
+          return { home: Number(game.score.home), away: Number(game.score.away) };
+        }
+        return null;
+      }
       return { home: Number(pointsT1), away: Number(pointsT2) };
     }
 
@@ -602,7 +637,7 @@
       }
 
       if (actualHome === null || actualAway === null) {
-        return { status: 'open', label: 'Offen', profit: null, detail: 'Live noch offen' };
+        return { status: 'open', label: 'Offen', profit: null, detail: 'Noch nicht abgeschlossen' };
       }
 
       const quote = parseQuote(bet.quote) || 1;
@@ -670,7 +705,7 @@
       }
 
       if (actualHome === null || actualAway === null) {
-        return { status: 'open', label: 'Offen', profit: null, detail: 'Live noch offen' };
+        return { status: 'open', label: 'Offen', profit: null, detail: 'Noch nicht abgeschlossen' };
       }
 
       if (type === 'free' && String(bet.manualResult || '').toLowerCase() === 'voided') {
@@ -689,8 +724,8 @@
     function getMatchdayProfit(matchday, liveScores = []) {
       return matchday.games.reduce((sum, game) => {
         const actual = getActualScoreForGame(game, liveScores);
-        const currentHome = actual ? actual.home : (game.score && game.score.home !== null && game.score.home !== '' ? Number(game.score.home) : null);
-        const currentAway = actual ? actual.away : (game.score && game.score.away !== null && game.score.away !== '' ? Number(game.score.away) : null);
+        const currentHome = actual ? actual.home : null;
+        const currentAway = actual ? actual.away : null;
         const result = evaluateBet(game, currentHome, currentAway);
         if (result.status === 'win' || result.status === 'loss') return sum + (result.profit || 0);
         if (result.status === 'voided') return sum;
@@ -710,8 +745,8 @@
         matchday.games.forEach(game => {
           if (game.player && BASE_ORDER.includes(game.player)) {
             const actual = getActualScoreForGame(game, liveScores);
-            const home = actual ? actual.home : (game.score && game.score.home !== null && game.score.home !== '' ? Number(game.score.home) : null);
-            const away = actual ? actual.away : (game.score && game.score.away !== null && game.score.away !== '' ? Number(game.score.away) : null);
+            const home = actual ? actual.home : null;
+            const away = actual ? actual.away : null;
             const result = evaluateBet(game, home, away);
             if (result.status === 'win' || result.status === 'loss') {
               dayTotal[game.player] += result.profit || 0;
@@ -825,8 +860,8 @@
 
     function renderGame(game, matchday) {
       const actual = getActualScoreForGame(game, state.liveMatches || []);
-      const currentHome = actual ? actual.home : (game.score && game.score.home !== null && game.score.home !== '' ? Number(game.score.home) : null);
-      const currentAway = actual ? actual.away : (game.score && game.score.away !== null && game.score.away !== '' ? Number(game.score.away) : null);
+      const currentHome = actual ? actual.home : null;
+      const currentAway = actual ? actual.away : null;
       const result = evaluateBet(game, currentHome, currentAway);
       const statusClass = result.status === 'win' ? 'win' : result.status === 'loss' ? 'loss' : result.status === 'voided' ? 'voided' : 'open';
 
@@ -884,11 +919,15 @@
         const liveScore = state.liveMatches || [];
         const dayProfit = getMatchdayProfit(matchday, liveScore);
 
+        const statusTag = el('span', { class: 'tag ' + (isLive ? 'live' : 'closed') + (isLive && !hasLiveConnection ? ' offline' : '') }, [
+          isLive ? (hasLiveConnection ? 'Live' : 'Offline') : 'Abgeschlossen'
+        ]);
+
         const card = el('section', { class: 'matchday-card' }, [
           el('div', { class: 'matchday-header' }, [
             el('h2', {}, [`Spieltag ${matchday.nr}`]),
             el('div', { class: 'matchday-tags' }, [
-              el('span', { class: 'tag ' + (isLive ? 'live' : 'closed') }, [isLive ? 'Live' : 'Abgeschlossen']),
+              statusTag,
               el('span', { class: 'tag' }, [isLive ? `${fmtEuro(dayProfit)}` : `Stand ${fmtEuro(dayProfit)}`])
             ])
           ]),
@@ -970,13 +1009,26 @@
       }
     }
 
+    function updateStatusPill() {
+      const pill = document.querySelector('.status-pill');
+      if (pill) {
+        pill.classList.toggle('offline', !hasLiveConnection);
+        const text = pill.firstChild.nextSibling;
+        if (text) {
+          text.textContent = hasLiveConnection ? 'Live-Stand' : 'Offline-Stand';
+        }
+      }
+    }
+
     function render() {
       const app = document.getElementById('app');
       app.innerHTML = '';
 
       const topBar = el('div', { class: 'topbar' }, [
         el('h1', { class: 'page-title' }, ['Tipprunde 2026']),
-        el('div', { class: 'status-pill' }, ['Live-Stand'])
+        el('div', { class: 'status-pill' + (hasLiveConnection ? '' : ' offline') }, [
+          hasLiveConnection ? 'Live-Stand' : 'Offline-Stand'
+        ])
       ]);
 
       app.appendChild(topBar);
@@ -1003,12 +1055,14 @@
           if (!response.ok) continue;
           const data = await response.json();
           if (Array.isArray(data) && data.length) {
+            hasLiveConnection = true;
             return data;
           }
         } catch (error) {
           // Ignore and continue to next candidate.
         }
       }
+      hasLiveConnection = false;
       return [];
     }
 
@@ -1027,7 +1081,7 @@
 
         render();
       } catch (error) {
-        app.innerHTML = '<div class="error-box">Konnte data.json oder live Ergebnisse nicht laden. Bitte später erneut versuchen.</div>';
+        app.innerHTML = '<div class="error-box">Konnte data.json nicht laden. Bitte später erneut versuchen.</div>';
       }
     }
 
@@ -1037,7 +1091,11 @@
         try {
           const liveMatches = await fetchLiveScores();
           state.liveMatches = liveMatches;
+          const wasConnected = hasLiveConnection;
           render();
+          if (wasConnected !== hasLiveConnection) {
+            updateStatusPill();
+          }
         } catch (error) {
           // Ignore refresh failures silently.
         }
