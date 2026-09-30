@@ -1,233 +1,1051 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Tipprunde</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#0F1417">
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0F1417" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
   <style>
-    :root{--bg:#0F1417;--bg-elevated:#151B1F;--card:#1A2126;--line:#2A343B;--text:#EEF1F0;--muted:#8B9AA3;--accent:#FFB238;--accent-soft:#4A3A1C;--win:#3FA35A;--win-soft:#16281C;--loss:#E4572E;--loss-soft:#2C1913;--void:#B08D57;--void-soft:#2B241A;--pending:#586570;--radius:10px}
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom)}
-    #app{max-width:1100px;margin:0 auto;padding:20px 16px 80px}
-    .tabs{display:flex;gap:6px;background:var(--bg-elevated);border:1px solid var(--line);border-radius:999px;padding:4px;margin-bottom:20px}
-    .tab{padding:7px 16px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border:none;background:transparent;font-family:inherit}
-    .tab.active{background:var(--accent);color:#1a1305}
-    .tab-content{display:none}
-    .tab-content.active{display:block}
-    .chart-container{position:relative;height:400px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:20px}
-    .season-chart{position:relative;width:100%;height:100%}
+    :root {
+      --bg: #0f1417;
+      --bg-elevated: #171f23;
+      --card: #1a2429;
+      --card-2: #1f2c31;
+      --line: rgba(255,255,255,0.08);
+      --text: #edf3f4;
+      --muted: #9aa9ae;
+      --accent: #ffb238;
+      --accent-soft: rgba(255,178,56,0.15);
+      --win: #48c37a;
+      --win-soft: rgba(72,195,122,0.13);
+      --loss: #f26d5b;
+      --loss-soft: rgba(242,109,91,0.12);
+      --live: #72d2ff;
+      --live-soft: rgba(114,210,255,0.12);
+      --shadow: 0 10px 28px rgba(0, 0, 0, 0.20);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      padding: 20px 14px 72px;
+    }
+
+    #app {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    .loading, .error-box {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px 18px;
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+
+    .error-box {
+      border-color: rgba(242,109,91,0.35);
+      color: #ffd9d2;
+      background: rgba(242,109,91,0.07);
+    }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .page-title {
+      font-size: clamp(1.6rem, 2vw, 2.25rem);
+      margin: 0;
+      letter-spacing: -0.04em;
+      font-weight: 800;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid rgba(255,178,56,0.28);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .status-pill::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 12px currentColor;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .tab {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .tab.active {
+      background: var(--accent);
+      color: #1d1203;
+      box-shadow: 0 8px 18px rgba(255,178,56,0.2);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .summary-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px 16px;
+    }
+
+    .summary-card .label {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .summary-card .value {
+      font-size: clamp(1.2rem, 2vw, 1.55rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .summary-card .value.positive { color: var(--win); }
+    .summary-card .value.negative { color: var(--loss); }
+    .summary-card .value.neutral { color: var(--muted); }
+
+    .matchday-list {
+      display: grid;
+      gap: 18px;
+    }
+
+    .matchday-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .matchday-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    }
+
+    .matchday-header h2 {
+      margin: 0;
+      font-size: 1.08rem;
+      letter-spacing: -0.02em;
+    }
+
+    .matchday-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .tag {
+      display: inline-flex;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 6px 9px;
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+
+    .tag.live {
+      background: var(--live-soft);
+      color: var(--live);
+      border-color: rgba(114,210,255,0.2);
+    }
+
+    .tag.closed {
+      background: rgba(255,255,255,0.03);
+      color: var(--muted);
+      border-color: rgba(255,255,255,0.04);
+    }
+
+    .games-grid {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .game-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 220px;
+    }
+
+    .game-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      min-height: 28px;
+    }
+
+    .player-badge {
+      display: inline-block;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 5px 9px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .bet-state {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+
+    .bet-state.win {
+      background: var(--win-soft);
+      color: var(--win);
+      border-color: rgba(72,195,122,0.2);
+    }
+
+    .bet-state.loss {
+      background: var(--loss-soft);
+      color: var(--loss);
+      border-color: rgba(242,109,91,0.2);
+    }
+
+    .bet-state.open {
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
+      border-color: rgba(255,255,255,0.06);
+    }
+
+    .bet-state.voided {
+      background: rgba(255,255,255,0.05);
+      color: #d0d7da;
+      border-color: rgba(255,255,255,0.08);
+    }
+
+    .teams {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .team {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+      text-align: center;
+      min-width: 0;
+    }
+
+    .team-name {
+      display: block;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--text);
+      min-height: 2.6em;
+    }
+
+    .score {
+      font-size: clamp(1.35rem, 2vw, 1.8rem);
+      font-weight: 900;
+      letter-spacing: -0.05em;
+    }
+
+    .versus {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .game-info {
+      display: grid;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .info-row {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .info-row .label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding-top: 2px;
+    }
+
+    .info-row .value {
+      color: var(--text);
+      font-size: 0.96rem;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .info-row .value strong {
+      font-weight: 800;
+    }
+
+    .positive-text { color: var(--win); }
+    .negative-text { color: var(--loss); }
+    .muted-text { color: var(--muted); }
+
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 12px;
+      min-height: 420px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 360px;
+      width: 100%;
+    }
+
+    .season-table-wrap {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      color: var(--text);
+    }
+
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      vertical-align: middle;
+    }
+
+    th {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: rgba(255,255,255,0.02);
+    }
+
+    td {
+      font-size: 0.95rem;
+    }
+
+    .tiny-tag {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.02);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    @media (max-width: 720px) {
+      body { padding-left: 10px; padding-right: 10px; }
+      .tabs { border-radius: 16px; }
+      .tab { flex: 1 1 45%; text-align: center; }
+      .games-grid { grid-template-columns: 1fr; }
+      .info-row { grid-template-columns: 82px 1fr; }
+      .matchday-header { align-items: flex-start; flex-direction: column; }
+      .matchday-tags { justify-content: flex-start; }
+    }
   </style>
 </head>
 <body>
   <div id="app">Lädt…</div>
+
   <script>
     const DATA_URL = './data.json';
     const STAKE = 2;
     const BASE_ORDER = ['Tino', 'Spani', 'Muc', 'Julian', 'Malte', 'Markus', 'Michi', 'Thomas'];
-    const BET_TYPES = {'1x2': '1X2', 'dc': 'Doppelte Chance', 'ou': 'Über/Unter', 'btts': 'Beide treffen', 'hc': 'Handicap', 'htft': 'HZ/Endstand', 'free': 'Freitext', 'wuo': 'Wette'};
-    const SEASON_BET_TYPES = {'meister': 'Deutscher Meister', 'top4': 'Top 4', 'top6': 'Top 6', 'top10': 'Top 10', 'klassenerhalt': 'Klassenerhalt', 'abstieg': 'Absteiger', 'free': 'Freitext'};
-    const PLAYER_COLORS = {Tino: '#FF6B6B', Spani: '#4ECDC4', Muc: '#FFE66D', Julian: '#95E1D3', Malte: '#F38181', Markus: '#AA96DA', Michi: '#FCBAD3', Thomas: '#A8D8EA'};
+    const PLAYER_COLORS = {
+      Tino: '#FF6B6B',
+      Spani: '#4ECDC4',
+      Muc: '#FFE66D',
+      Julian: '#95E1D3',
+      Malte: '#F38181',
+      Markus: '#AA96DA',
+      Michi: '#FCBAD3',
+      Thomas: '#A8D8EA'
+    };
 
-    let state = null, currentTab = 'matchday', chartInstance = null;
+    const BET_TYPE_LABELS = {
+      '1x2': '1X2',
+      dc: 'Doppelte Chance',
+      ou: 'Über/Unter',
+      btts: 'Beide treffen',
+      hc: 'Handicap',
+      htft: 'HZ/Endstand',
+      free: 'Freitext',
+      wuo: 'Wette'
+    };
 
-    function fmtEuro(v) {
-      if (v === null || v === undefined) return '–';
-      const sign = v > 0 ? '+' : '';
-      return sign + v.toFixed(2).replace('.', ',') + ' €';
+    const SEASON_BET_LABELS = {
+      meister: 'Deutscher Meister',
+      top4: 'Top 4',
+      top6: 'Top 6',
+      top10: 'Top 10',
+      klassenerhalt: 'Klassenerhalt',
+      abstieg: 'Absteiger',
+      free: 'Freitext'
+    };
+
+    let state = null;
+    let chartInstance = null;
+    let liveRefreshTimer = null;
+    let currentTab = 'overview';
+
+    function fmtEuro(value) {
+      if (value === null || value === undefined || Number.isNaN(Number(value))) return '–';
+      const numeric = Number(value);
+      const sign = numeric > 0 ? '+' : '';
+      return sign + numeric.toFixed(2).replace('.', ',') + ' €';
     }
 
-    function el(tag, attrs, children) {
-      const e = document.createElement(tag);
-      if (attrs) {
-        Object.keys(attrs).forEach(k => {
-          if (attrs[k] == null) return;
-          if (k === 'class') e.className = attrs[k];
-          else if (k.startsWith('on')) e.addEventListener(k.slice(2), attrs[k]);
-          else e.setAttribute(k, attrs[k]);
+    function el(tag, attrs = {}, children = []) {
+      const element = document.createElement(tag);
+      Object.keys(attrs).forEach(key => {
+        if (attrs[key] == null) return;
+        if (key === 'class') element.className = attrs[key];
+        else if (key === 'style') element.setAttribute('style', attrs[key]);
+        else if (key.startsWith('on') && typeof attrs[key] === 'function') {
+          element.addEventListener(key.slice(2).toLowerCase(), attrs[key]);
+        } else {
+          element.setAttribute(key, attrs[key]);
+        }
+      });
+      children.forEach(child => {
+        if (child == null) return;
+        element.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+      });
+      return element;
+    }
+
+    function normalizeTeamName(value) {
+      return String(value || '')
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .replace(/^(fc|sv|1\.|bor\.|vfb|tsg|rb|sc|1\s*fsv|bayer\s*04|bayern\s*münchen|bayern|hamburger|union|schalke|mainz|augsburg|freiburg|leipzig|monchengladbach|paderborn|hoffenheim|stuttgart|dortmund|elversberg|bremen|frankfurt)/gi, '')
+        .replace(/[^a-z0-9]/g, '')
+        .trim();
+    }
+
+    function parseQuote(value) {
+      if (value === null || value === undefined || value === '') return null;
+      const parsed = Number(String(value).replace(',', '.').replace(/\s/g, ''));
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function getBetProfit(game) {
+      const meta = evaluateBet(game, game.score && game.score.home !== null && game.score.home !== '' && game.score.away !== null && game.score.away !== '' ? Number(game.score.home) : null, game.score && game.score.home !== null && game.score.home !== '' && game.score.away !== null && game.score.away !== '' ? Number(game.score.away) : null);
+      return meta.profit;
+    }
+
+    function getActualScoreForGame(game, liveList = []) {
+      const liveMatch = liveList.find(match => {
+        const a = normalizeTeamName(match.Team1 && match.Team1.TeamName ? match.Team1.TeamName : match.team1 && match.team1.teamName ? match.team1.teamName : '');
+        const b = normalizeTeamName(match.Team2 && match.Team2.TeamName ? match.Team2.TeamName : match.team2 && match.team2.teamName ? match.team2.teamName : '');
+        const ga = normalizeTeamName(game.home);
+        const gb = normalizeTeamName(game.away);
+        return (a === ga && b === gb) || (a === gb && b === ga);
+      });
+
+      if (!liveMatch) return null;
+
+      const pointsT1 =
+        liveMatch.GoalsTeam1 ??
+        liveMatch.goalsTeam1 ??
+        (Array.isArray(liveMatch.MatchResults) && liveMatch.MatchResults.length ? Number(liveMatch.MatchResults[0].PointsTeam1) : null);
+
+      const pointsT2 =
+        liveMatch.GoalsTeam2 ??
+        liveMatch.goalsTeam2 ??
+        (Array.isArray(liveMatch.MatchResults) && liveMatch.MatchResults.length ? Number(liveMatch.MatchResults[0].PointsTeam2) : null);
+
+      if (pointsT1 === null || pointsT2 === null || Number.isNaN(Number(pointsT1)) || Number.isNaN(Number(pointsT2))) return null;
+      return { home: Number(pointsT1), away: Number(pointsT2) };
+    }
+
+    function evaluateOutcome(actualHome, actualAway) {
+      if (actualHome === null || actualAway === null) return null;
+      if (actualHome > actualAway) return 'Heim';
+      if (actualHome < actualAway) return 'Auswärts';
+      return 'Unentschieden';
+    }
+
+    function evaluateBet(game, actualHome, actualAway) {
+      const bet = game.bet || {};
+      if (bet.voided === true) return { status: 'voided', label: 'Storniert', profit: 0, detail: 'Stornierung' };
+      if (bet.manualResult) {
+        const win = String(bet.manualResult).toLowerCase() === 'win';
+        const quote = parseQuote(bet.quote) || 1;
+        const profit = win ? Math.round((quote * STAKE - STAKE) * 100) / 100 : -STAKE;
+        return {
+          status: win ? 'win' : 'loss',
+          label: win ? 'Gewonnen' : 'Verloren',
+          profit,
+          detail: bet.freitext || 'Freitextwette'
+        };
+      }
+
+      if (actualHome === null || actualAway === null) {
+        return { status: 'open', label: 'Offen', profit: null, detail: 'Live noch offen' };
+      }
+
+      const quote = parseQuote(bet.quote) || 1;
+      const type = bet.type || '1x2';
+      const selection = String(bet.selection || '').trim();
+      const actualOutcome = evaluateOutcome(actualHome, actualAway);
+      const totalGoals = actualHome + actualAway;
+      const threshold = parseQuote(bet.line);
+
+      let won = false;
+      let text = '';
+
+      if (type === '1x2') {
+        won = selection === actualOutcome;
+        text = `${selection === 'Heim' ? 'Heim' : selection === 'Auswärts' ? 'Auswärts' : 'Unentschieden'} • ${actualOutcome}`;
+      } else if (type === 'dc') {
+        const options = ['1X', 'X2', '12'];
+        const outcomeCode = actualHome > actualAway ? '1' : actualHome < actualAway ? '2' : 'X';
+        const result = actualHome > actualAway ? '1' : actualHome < actualAway ? '2' : 'X';
+        const selected = String(selection || '').toUpperCase();
+        const isWin = selected === '1X' ? (result === '1' || result === 'X') :
+          selected === 'X2' ? (result === '2' || result === 'X') :
+          selected === '12' ? (result === '1' || result === '2') : false;
+        won = isWin;
+        text = `${selection || '—'} • ${result === '1' ? 'Heim' : result === '2' ? 'Auswärts' : 'Unentschieden'}`;
+      } else if (type === 'ou') {
+        const target = threshold !== null ? threshold : 2.5;
+        const over = totalGoals > target;
+        const selected = (String(selection || '').toLowerCase() === 'über');
+        won = selected === over;
+        text = `${selection || '—'} • ${totalGoals} Tore`;
+      } else if (type === 'btts') {
+        const selected = String(selection || '').toLowerCase() === 'ja';
+        won = selected === (actualHome > 0 && actualAway > 0);
+        text = `${actualHome > 0 && actualAway > 0 ? 'Ja' : 'Nein'} • ${actualHome}:${actualAway}`;
+      } else if (type === 'hc') {
+        const team = String(bet.hcTeam || 'Heim');
+        const value = Number(bet.hcValue ?? 0);
+        const handicapHome = team === 'Heim' ? actualHome + value : actualHome;
+        const handicapAway = team === 'Heim' ? actualAway : actualAway - value;
+        const selected = String(selection || '').trim();
+        const result = handicapHome > handicapAway ? 'Heim' : handicapHome < handicapAway ? 'Auswärts' : 'Unentschieden';
+        won = selected === result;
+        text = `${selection || '—'} • HC ${value}`;
+      } else if (type === 'htft') {
+        const half = game.score && game.score.htHome !== null && game.score.htAway !== null ? { home: Number(game.score.htHome), away: Number(game.score.htAway) } : null;
+        const halfResult = half ? (half.home > half.away ? 'Heim' : half.home < half.away ? 'Auswärts' : 'Unentschieden') : null;
+        const fullResult = actualOutcome;
+        const selected = String(selection || '').trim();
+        const combination = `${halfResult || '—'} / ${fullResult}`;
+        won = selected === combination;
+        text = `${selected} • ${combination}`;
+      } else if (type === 'wuo') {
+        const selected = String(selection || '').trim();
+        const underOver = String(bet.ouSelection || '').trim();
+        const teamWon = selected === actualOutcome;
+        const overSelected = underOver.toLowerCase() === 'über';
+        const overWon = totalGoals > (threshold !== null ? threshold : 2.5);
+        const selectedOver = (overSelected === overWon);
+        won = teamWon && selectedOver;
+        text = `${selection || '—'} + ${underOver || '—'} • ${actualHome}:${actualAway}`;
+      } else {
+        won = String(selection || '').toLowerCase() === String(actualOutcome || '').toLowerCase();
+        text = `${selection || '—'} • ${actualOutcome}`;
+      }
+
+      if (actualHome === null || actualAway === null) {
+        return { status: 'open', label: 'Offen', profit: null, detail: 'Live noch offen' };
+      }
+
+      if (type === 'free' && String(bet.manualResult || '').toLowerCase() === 'voided') {
+        return { status: 'voided', label: 'Storniert', profit: 0, detail: 'Stornierung' };
+      }
+
+      const profit = won ? Math.round((quote * STAKE - STAKE) * 100) / 100 : -STAKE;
+      return {
+        status: won ? 'win' : 'loss',
+        label: won ? 'Gewonnen' : 'Verloren',
+        profit,
+        detail: text
+      };
+    }
+
+    function getMatchdayProfit(matchday, liveScores = []) {
+      return matchday.games.reduce((sum, game) => {
+        const actual = getActualScoreForGame(game, liveScores);
+        const currentHome = actual ? actual.home : (game.score && game.score.home !== null && game.score.home !== '' ? Number(game.score.home) : null);
+        const currentAway = actual ? actual.away : (game.score && game.score.away !== null && game.score.away !== '' ? Number(game.score.away) : null);
+        const result = evaluateBet(game, currentHome, currentAway);
+        if (result.status === 'win' || result.status === 'loss') return sum + (result.profit || 0);
+        if (result.status === 'voided') return sum;
+        return sum;
+      }, 0);
+    }
+
+    function computeSeasonTotals(matchdays, liveScores = []) {
+      const totals = {};
+      BASE_ORDER.forEach(player => totals[player] = 0);
+      const perMatchday = {};
+
+      matchdays.forEach(matchday => {
+        const dayTotal = {};
+        BASE_ORDER.forEach(player => dayTotal[player] = 0);
+
+        matchday.games.forEach(game => {
+          if (game.player && BASE_ORDER.includes(game.player)) {
+            const actual = getActualScoreForGame(game, liveScores);
+            const home = actual ? actual.home : (game.score && game.score.home !== null && game.score.home !== '' ? Number(game.score.home) : null);
+            const away = actual ? actual.away : (game.score && game.score.away !== null && game.score.away !== '' ? Number(game.score.away) : null);
+            const result = evaluateBet(game, home, away);
+            if (result.status === 'win' || result.status === 'loss') {
+              dayTotal[game.player] += result.profit || 0;
+            }
+          }
         });
-      }
-      (children || []).forEach(c => {
-        if (c != null) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+
+        BASE_ORDER.forEach(player => {
+          totals[player] += dayTotal[player] || 0;
+        });
+        perMatchday[matchday.nr] = dayTotal;
       });
-      return e;
+
+      return { totals, perMatchday };
     }
 
-    function computeResult(game) {
-      const b = game.bet || {};
-      const s = game.score || {};
-      if (b.voided === true) return 'voided';
-      if (b.type === 'free') return b.manualResult;
-      if (s.home === null || s.home === '' || s.away === null || s.away === '') return null;
-      const h = Number(s.home), a = Number(s.away);
-      if (!b.type || !b.selection) return null;
-      if (b.type === '1x2') {
-        const out = h > a ? 'Heim' : (h < a ? 'Auswärts' : 'Unentschieden');
-        return b.selection === out ? 'win' : 'loss';
+    function scoreText(game, actual) {
+      if (!actual) {
+        if (game.score && game.score.home !== null && game.score.home !== '' && game.score.away !== null && game.score.away !== '') {
+          return `${game.score.home}:${game.score.away}`;
+        }
+        return '–:–';
       }
-      return null;
+      return `${actual.home}:${actual.away}`;
     }
 
-    function gameProfit(game) {
-      const res = computeResult(game);
-      if (res === 'win') {
-        const q = Number(game.bet.quote);
-        if (!q) return null;
-        return Math.round((q * STAKE - STAKE) * 100) / 100;
-      }
-      if (res === 'loss') return game.rank === 1 ? 0 : -STAKE;
-      return null;
+    function betText(game) {
+      const bet = game.bet || {};
+      const quote = parseQuote(bet.quote);
+      const label = bet.type && BET_TYPE_LABELS[bet.type] ? BET_TYPE_LABELS[bet.type] : 'Wette';
+      const selectionText = bet.selection ? String(bet.selection) : bet.freitext ? 'Freitext' : '–';
+      const quoteText = quote !== null ? `@ ${quote.toFixed(2).replace('.', ',')}` : '';
+      if (bet.type === 'free' && bet.freitext) return `${bet.freitext}`;
+      return `${label} • ${selectionText}${quoteText ? ' ' + quoteText : ''}`;
     }
 
-    function matchdayTotals(md) {
-      const totals = {};
-      BASE_ORDER.forEach(p => totals[p] = 0);
-      md.games.forEach(g => {
-        const p = gameProfit(g);
-        if (p !== null) totals[g.player] += p;
+    function renderStandings() {
+      const { totals } = computeSeasonTotals(state.matchdays, state.liveMatches || []);
+      const cards = [];
+      BASE_ORDER.forEach(player => {
+        const value = totals[player] || 0;
+        cards.push(
+          el('div', { class: 'summary-card' }, [
+            el('div', { class: 'label' }, [player]),
+            el('div', { class: 'value ' + (value > 0 ? 'positive' : value < 0 ? 'negative' : 'neutral') }, [fmtEuro(value)])
+          ])
+        );
       });
-      return totals;
-    }
-
-    function seasonTotals() {
-      const totals = {};
-      BASE_ORDER.forEach(p => totals[p] = 0);
-      const perMd = [];
-      state.matchdays.forEach(md => {
-        const t = matchdayTotals(md);
-        perMd.push(t);
-        Object.keys(t).forEach(p => totals[p] += t[p]);
-      });
-      return {totals, perMd};
+      return el('div', { class: 'summary-grid' }, cards);
     }
 
     function buildSeasonChart() {
-      const {totals, perMd} = seasonTotals();
-      const datasets = [];
+      const { perMatchday } = computeSeasonTotals(state.matchdays, state.liveMatches || []);
+      const labels = state.matchdays.map(md => `MD ${md.nr}`);
 
-      BASE_ORDER.forEach(player => {
+      const datasets = BASE_ORDER.map(player => {
         let cumulative = 0;
-        const data = perMd.map(md => {
-          cumulative += md[player] || 0;
+        const data = labels.map((_, index) => {
+          const mdNumber = state.matchdays[index].nr;
+          cumulative += Number(perMatchday[mdNumber]?.[player] || 0);
           return cumulative;
         });
 
-        datasets.push({
+        return {
           label: player,
-          data: data,
+          data,
           borderColor: PLAYER_COLORS[player] || '#888',
-          backgroundColor: PLAYER_COLORS[player] + '20',
-          tension: 0.3,
+          backgroundColor: PLAYER_COLORS[player] + '22',
+          borderWidth: 2,
+          tension: 0.25,
           fill: false,
-          borderWidth: 2
-        });
+          pointRadius: 2,
+          pointHoverRadius: 4
+        };
       });
 
-      const labels = state.matchdays.map((md, idx) => 'MD ' + (idx + 1));
-
       if (chartInstance) chartInstance.destroy();
+      const canvas = document.getElementById('seasonChart');
+      if (!canvas) return;
 
-      const chartCanvas = document.getElementById('seasonChart');
-      if (!chartCanvas) return;
-
-      chartInstance = new Chart(chartCanvas, {
+      chartInstance = new Chart(canvas, {
         type: 'line',
-        data: {labels, datasets},
+        data: { labels, datasets },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: { mode: 'nearest', intersect: false },
           plugins: {
             legend: {
-              labels: {color: '#EEF1F0', font: {size: 12}},
-              display: true
+              labels: {
+                color: '#EEF1F0',
+                usePointStyle: true,
+                pointStyle: 'circle'
+              }
             }
           },
           scales: {
             x: {
-              ticks: {color: '#8B9AA3'},
-              grid: {color: '#2A343B'}
+              ticks: { color: '#A7B3B8' },
+              grid: { color: 'rgba(255,255,255,0.04)' }
             },
             y: {
-              ticks: {color: '#8B9AA3'},
-              grid: {color: '#2A343B'},
-              title: {display: true, text: 'Gesamtgewinn (€)', color: '#EEF1F0'}
+              ticks: { color: '#A7B3B8' },
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              title: { display: true, text: 'Gesamtgewinn (€)', color: '#EEF1F0' }
             }
           }
         }
       });
     }
 
-    async function loadData() {
-      const app = document.getElementById('app');
-      try {
-        const res = await fetch(DATA_URL + '?t=' + Date.now(), {cache: 'no-store'});
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        state = await res.json();
-        if (!state.matchdays) throw new Error('Ungültiges Datenformat');
-        render();
-      } catch (e) {
-        app.innerHTML = '';
-        app.appendChild(el('div', {class: 'error-box'}, [
-          'Konnte data.json nicht laden. (' + e.message + ')'
+    function renderGame(game, matchday) {
+      const actual = getActualScoreForGame(game, state.liveMatches || []);
+      const currentHome = actual ? actual.home : (game.score && game.score.home !== null && game.score.home !== '' ? Number(game.score.home) : null);
+      const currentAway = actual ? actual.away : (game.score && game.score.away !== null && game.score.away !== '' ? Number(game.score.away) : null);
+      const result = evaluateBet(game, currentHome, currentAway);
+      const statusClass = result.status === 'win' ? 'win' : result.status === 'loss' ? 'loss' : result.status === 'voided' ? 'voided' : 'open';
+
+      const score = scoreText(game, actual);
+
+      return el('article', { class: 'game-card' }, [
+        el('div', { class: 'game-meta' }, [
+          el('span', { class: 'player-badge' }, [game.player]),
+          el('span', { class: 'bet-state ' + statusClass }, [result.label])
+        ]),
+        el('div', { class: 'teams' }, [
+          el('div', { class: 'team' }, [
+            el('span', { class: 'team-name' }, [game.home]),
+            el('span', { class: 'score' }, [actual ? actual.home : (game.score && game.score.home !== null && game.score.home !== '' ? game.score.home : '–')])
+          ]),
+          el('span', { class: 'versus' }, ['vs']),
+          el('div', { class: 'team' }, [
+            el('span', { class: 'team-name' }, [game.away]),
+            el('span', { class: 'score' }, [actual ? actual.away : (game.score && game.score.away !== null && game.score.away !== '' ? game.score.away : '–')])
+          ])
+        ]),
+        el('div', { class: 'game-info' }, [
+          el('div', { class: 'info-row' }, [
+            el('span', { class: 'label' }, ['Ergebnis']),
+            el('span', { class: 'value' }, [
+              el('strong', {}, [score]),
+              actual ? '' : ' '
+            ])
+          ]),
+          el('div', { class: 'info-row' }, [
+            el('span', { class: 'label' }, ['Wette']),
+            el('span', { class: 'value' }, [betText(game)])
+          ]),
+          el('div', { class: 'info-row' }, [
+            el('span', { class: 'label' }, ['Getippt']),
+            el('span', { class: 'value' }, [game.player])
+          ]),
+          el('div', { class: 'info-row' }, [
+            el('span', { class: 'label' }, ['Wettergebnis']),
+            el('span', { class: 'value ' + (result.status === 'win' ? 'positive-text' : result.status === 'loss' ? 'negative-text' : 'muted-text') }, [
+              result.status === 'win' ? `${result.label} (${fmtEuro(result.profit)})` :
+              result.status === 'loss' ? `${result.label} (${fmtEuro(result.profit)})` :
+              result.status === 'voided' ? 'Storniert' : 'Noch offen'
+            ])
+          ])
+        ])
+      ]);
+    }
+
+    function renderMatchdays() {
+      const container = el('div', { class: 'matchday-list' }, []);
+
+      state.matchdays.forEach(matchday => {
+        const isLive = !matchday.closed;
+        const liveScore = state.liveMatches || [];
+        const dayProfit = getMatchdayProfit(matchday, liveScore);
+
+        const card = el('section', { class: 'matchday-card' }, [
+          el('div', { class: 'matchday-header' }, [
+            el('h2', {}, [`Spieltag ${matchday.nr}`]),
+            el('div', { class: 'matchday-tags' }, [
+              el('span', { class: 'tag ' + (isLive ? 'live' : 'closed') }, [isLive ? 'Live' : 'Abgeschlossen']),
+              el('span', { class: 'tag' }, [isLive ? `${fmtEuro(dayProfit)}` : `Stand ${fmtEuro(dayProfit)}`])
+            ])
+          ]),
+          el('div', { class: 'games-grid' }, matchday.games.map(game => renderGame(game, matchday)))
+        ]);
+
+        container.appendChild(card);
+      });
+
+      return container;
+    }
+
+    function renderSeasonBets() {
+      const rows = [];
+      BASE_ORDER.forEach(player => {
+        const bet = state.seasonBets && state.seasonBets[player] ? state.seasonBets[player] : null;
+        if (!bet) return;
+
+        const typeLabel = SEASON_BET_LABELS[bet.type] || bet.type || 'Saisonwette';
+        const quote = parseQuote(bet.quote);
+        rows.push(el('tr', {}, [
+          el('td', {}, [player]),
+          el('td', {}, [el('span', { class: 'tiny-tag' }, [typeLabel])]),
+          el('td', {}, [bet.team || '–']),
+          el('td', {}, [quote !== null ? quote.toFixed(2).replace('.', ',') : '–']),
+          el('td', {}, [bet.manualResult ? (bet.manualResult === 'win' ? 'Gewonnen' : 'Verloren') : 'Offen'])
         ]));
+      });
+
+      return el('div', { class: 'season-table-wrap' }, [
+        el('table', {}, [
+          el('thead', {}, [
+            el('tr', {}, [
+              el('th', {}, ['Spieler']),
+              el('th', {}, ['Wette']),
+              el('th', {}, ['Team']),
+              el('th', {}, ['Quote']),
+              el('th', {}, ['Status'])
+            ])
+          ]),
+          el('tbody', {}, rows)
+        ])
+      ]);
+    }
+
+    function renderTabs() {
+      const tabs = el('div', { class: 'tabs' }, [
+        el('button', { class: 'tab active', type: 'button', 'data-tab': 'overview', onclick: () => switchTab('overview') }, ['Spieltage']),
+        el('button', { class: 'tab', type: 'button', 'data-tab': 'chart', onclick: () => switchTab('chart') }, ['Grafik']),
+        el('button', { class: 'tab', type: 'button', 'data-tab': 'season', onclick: () => switchTab('season') }, ['Saisonwetten'])
+      ]);
+
+      const overview = el('div', { class: 'tab-content active', id: 'overview-content' }, [
+        renderStandings(),
+        renderMatchdays()
+      ]);
+
+      const chart = el('div', { class: 'tab-content', id: 'chart-content' }, [
+        el('div', { class: 'chart-card' }, [
+          el('div', { class: 'chart-wrap' }, [
+            el('canvas', { id: 'seasonChart' })
+          ])
+        ])
+      ]);
+
+      const season = el('div', { class: 'tab-content', id: 'season-content' }, [
+        renderSeasonBets()
+      ]);
+
+      return { tabs, overview, chart, season };
+    }
+
+    function switchTab(tabName) {
+      currentTab = tabName;
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.toggle('active', content.id === tabName + '-content'));
+      if (tabName === 'chart') {
+        setTimeout(buildSeasonChart, 20);
       }
     }
 
     function render() {
       const app = document.getElementById('app');
-      const {totals} = seasonTotals();
-
       app.innerHTML = '';
 
-      // Tabs
-      const tabsContainer = el('div', {class: 'tabs'}, [
-        el('button', {class: 'tab active', 'data-tab': 'overview', onclick: () => switchTab('overview')}, ['Übersicht']),
-        el('button', {class: 'tab', 'data-tab': 'chart', onclick: () => switchTab('chart')}, ['Grafik'])
+      const topBar = el('div', { class: 'topbar' }, [
+        el('h1', { class: 'page-title' }, ['Tipprunde 2026']),
+        el('div', { class: 'status-pill' }, ['Live-Stand'])
       ]);
-      app.appendChild(tabsContainer);
 
-      // Overview Tab
-      const overviewTab = el('div', {class: 'tab-content active', id: 'overview-content'});
-      const statsContainer = el('div', {class: 'stats'});
-      BASE_ORDER.forEach(player => {
-        const val = totals[player] || 0;
-        statsContainer.appendChild(el('div', {class: 'stat-item'}, [
-          el('div', {class: 'stat-name'}, [player]),
-          el('div', {class: 'stat-value', style: 'color:' + (val > 0 ? '#3FA35A' : val < 0 ? '#E4572E' : '#8B9AA3')}, [fmtEuro(val)])
-        ]));
-      });
-      overviewTab.appendChild(statsContainer);
-      app.appendChild(overviewTab);
+      app.appendChild(topBar);
 
-      // Chart Tab
-      const chartTab = el('div', {class: 'tab-content', id: 'chart-content'});
-      const chartContainer = el('div', {class: 'chart-container'});
-      chartContainer.appendChild(el('canvas', {id: 'seasonChart', class: 'season-chart'}));
-      chartTab.appendChild(chartContainer);
-      app.appendChild(chartTab);
+      const tabs = renderTabs();
+      app.appendChild(tabs.tabs);
+      app.appendChild(tabs.overview);
+      app.appendChild(tabs.chart);
+      app.appendChild(tabs.season);
 
-      // Show chart when tab is clicked
-      setTimeout(() => buildSeasonChart(), 100);
+      setTimeout(buildSeasonChart, 30);
     }
 
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      
-      document.querySelector('[data-tab="' + tabName + '"]').classList.add('active');
-      document.getElementById(tabName + '-content').classList.add('active');
+    async function fetchLiveScores() {
+      const urls = [
+        'https://www.openligadb.de/api/getmatchdata/bl1/2026',
+        'https://www.openligadb.de/api/getmatchdata/bl1/2025',
+        'https://www.openligadb.de/api/getmatchdata/bl1'
+      ];
 
-      if (tabName === 'chart') {
-        setTimeout(() => buildSeasonChart(), 100);
+      for (const url of urls) {
+        try {
+          const response = await fetch(url, { cache: 'no-store' });
+          if (!response.ok) continue;
+          const data = await response.json();
+          if (Array.isArray(data) && data.length) {
+            return data;
+          }
+        } catch (error) {
+          // Ignore and continue to next candidate.
+        }
+      }
+      return [];
+    }
+
+    async function loadData() {
+      const app = document.getElementById('app');
+      app.innerHTML = '<div class="loading">Lädt Daten…</div>';
+
+      try {
+        const response = await fetch(DATA_URL + '?t=' + Date.now(), { cache: 'no-store' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        state = await response.json();
+        if (!state.matchdays) throw new Error('Ungültiges Datenformat');
+
+        const liveMatches = await fetchLiveScores();
+        state.liveMatches = liveMatches;
+
+        render();
+      } catch (error) {
+        app.innerHTML = '<div class="error-box">Konnte data.json oder live Ergebnisse nicht laden. Bitte später erneut versuchen.</div>';
       }
     }
 
+    function startLiveRefresh() {
+      if (liveRefreshTimer) clearInterval(liveRefreshTimer);
+      liveRefreshTimer = setInterval(async () => {
+        try {
+          const liveMatches = await fetchLiveScores();
+          state.liveMatches = liveMatches;
+          render();
+        } catch (error) {
+          // Ignore refresh failures silently.
+        }
+      }, 30000);
+    }
+
     loadData();
+    startLiveRefresh();
   </script>
 </body>
 </html>
