@@ -352,7 +352,7 @@
             "hcTeam": "Heim",
             "hcValue": -1,
             "freitext": "Schießt Edin Dzeko ein Tor? Ja",
-            "manualResult": null,
+            "manualResult": "loss",
             "voided": true
           },
           "score": {
@@ -634,8 +634,8 @@
             "voided": false
           },
           "score": {
-            "home": "",
-            "away": "",
+            "home": 7,
+            "away": 0,
             "htHome": null,
             "htAway": null
           }
@@ -658,10 +658,10 @@
             "voided": false
           },
           "score": {
-            "home": null,
-            "away": null,
-            "htHome": null,
-            "htAway": null
+            "home": 2,
+            "away": 2,
+            "htHome": "2",
+            "htAway": "1"
           }
         },
         {
@@ -682,8 +682,8 @@
             "voided": false
           },
           "score": {
-            "home": null,
-            "away": null,
+            "home": 3,
+            "away": 4,
             "htHome": null,
             "htAway": null
           }
@@ -706,8 +706,8 @@
             "voided": false
           },
           "score": {
-            "home": null,
-            "away": null,
+            "home": 2,
+            "away": 1,
             "htHome": null,
             "htAway": null
           }
@@ -730,8 +730,8 @@
             "voided": false
           },
           "score": {
-            "home": null,
-            "away": null,
+            "home": 3,
+            "away": 2,
             "htHome": null,
             "htAway": null
           }
@@ -743,7 +743,7 @@
           "away": "Borussia Dortmund",
           "bet": {
             "type": "ou",
-            "selection": "",
+            "selection": "Über",
             "quote": "1.85",
             "line": "3.5",
             "hcTeam": "Heim",
@@ -754,8 +754,8 @@
             "voided": false
           },
           "score": {
-            "home": null,
-            "away": null,
+            "home": 0,
+            "away": 1,
             "htHome": null,
             "htAway": null
           }
@@ -778,8 +778,8 @@
             "voided": false
           },
           "score": {
-            "home": null,
-            "away": null,
+            "home": 2,
+            "away": 0,
             "htHome": null,
             "htAway": null
           }
@@ -802,8 +802,8 @@
             "voided": false
           },
           "score": {
-            "home": null,
-            "away": null,
+            "home": 0,
+            "away": 0,
             "htHome": null,
             "htAway": null
           }
@@ -821,6 +821,450 @@
             "hcTeam": "Heim",
             "hcValue": -1,
             "ouSelection": "Über",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": 3,
+            "away": 1,
+            "htHome": null,
+            "htAway": null
+          }
+        }
+      ],
+      "closed": true
+    },
+    {
+      "nr": 5,
+      "games": [
+        {
+          "rank": 1,
+          "player": "Michi",
+          "home": "Borussia Dortmund",
+          "away": "Werder Bremen",
+          "bet": {
+            "type": "free",
+            "selection": "",
+            "quote": 10,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "Niclas Fullkrug trifft und Werder Bremen gewinnt: Ja",
+            "manualResult": "loss",
+            "voided": false
+          },
+          "score": {
+            "home": 2,
+            "away": 2,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 2,
+          "player": "Tino",
+          "home": "TSG Hoffenheim",
+          "away": "Hamburger SV",
+          "bet": {
+            "type": "1x2",
+            "selection": "Heim",
+            "quote": 1.4,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": 2,
+            "away": 3,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 3,
+          "player": "Spani",
+          "home": "FC Augsburg",
+          "away": "Bayern München",
+          "bet": {
+            "type": "wuo",
+            "selection": "Auswärts",
+            "quote": 1.2,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "Über",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": 2,
+            "away": 2,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 4,
+          "player": "Muc",
+          "home": "1. FSV Mainz 05",
+          "away": "Bayer 04 Leverkusen",
+          "bet": {
+            "type": "free",
+            "selection": "",
+            "quote": 1.2,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "1. Halbzeit-Über/Unter (0,5): Über 0,5",
+            "manualResult": "win",
+            "voided": false
+          },
+          "score": {
+            "home": 3,
+            "away": 4,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 5,
+          "player": "Julian",
+          "home": "1. FC Union Berlin",
+          "away": "SV Elversberg",
+          "bet": {
+            "type": "ou",
+            "selection": "Über",
+            "quote": 1.5,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": 1,
+            "away": 0,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 6,
+          "player": "Malte",
+          "home": "SC Paderborn 07",
+          "away": "VfB Stuttgart",
+          "bet": {
+            "type": "hc",
+            "selection": "Auswärts",
+            "quote": 2.15,
+            "line": 2.5,
+            "hcTeam": "Auswärts",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": 0,
+            "away": 2,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 7,
+          "player": "Markus",
+          "home": "RB Leipzig",
+          "away": "Eintracht Frankfurt",
+          "bet": {
+            "type": "1x2",
+            "selection": "Heim",
+            "quote": 1.55,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": 6,
+            "away": 0,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 8,
+          "player": "Michi",
+          "home": "1. FC Köln",
+          "away": "Borussia Mönchengladbach",
+          "bet": {
+            "type": "1x2",
+            "selection": "Heim",
+            "quote": 2.05,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": 2,
+            "away": 1,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 9,
+          "player": "Thomas",
+          "home": "SC Freiburg",
+          "away": "FC Schalke 04",
+          "bet": {
+            "type": "1x2",
+            "selection": "Heim",
+            "quote": 1.6,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": 2,
+            "away": 1,
+            "htHome": null,
+            "htAway": null
+          }
+        }
+      ],
+      "closed": true
+    },
+    {
+      "nr": 6,
+      "games": [
+        {
+          "rank": 1,
+          "player": "Malte",
+          "home": "Eintracht Frankfurt",
+          "away": "1. FC Köln",
+          "bet": {
+            "type": "",
+            "selection": "",
+            "quote": null,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": null,
+            "away": null,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 2,
+          "player": "Tino",
+          "home": "1. FC Union Berlin",
+          "away": "Borussia Dortmund",
+          "bet": {
+            "type": "",
+            "selection": "",
+            "quote": null,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": null,
+            "away": null,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 3,
+          "player": "Spani",
+          "home": "Hamburger SV",
+          "away": "VfB Stuttgart",
+          "bet": {
+            "type": "",
+            "selection": "",
+            "quote": null,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": null,
+            "away": null,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 4,
+          "player": "Muc",
+          "home": "Werder Bremen",
+          "away": "SC Paderborn 07",
+          "bet": {
+            "type": "",
+            "selection": "",
+            "quote": null,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": null,
+            "away": null,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 5,
+          "player": "Julian",
+          "home": "FC Schalke 04",
+          "away": "1. FSV Mainz 05",
+          "bet": {
+            "type": "",
+            "selection": "",
+            "quote": null,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": null,
+            "away": null,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 6,
+          "player": "Malte",
+          "home": "SV Elversberg",
+          "away": "FC Augsburg",
+          "bet": {
+            "type": "",
+            "selection": "",
+            "quote": null,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": null,
+            "away": null,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 7,
+          "player": "Markus",
+          "home": "Bayern München",
+          "away": "RB Leipzig",
+          "bet": {
+            "type": "",
+            "selection": "",
+            "quote": null,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": null,
+            "away": null,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 8,
+          "player": "Michi",
+          "home": "Bayer 04 Leverkusen",
+          "away": "SC Freiburg",
+          "bet": {
+            "type": "",
+            "selection": "",
+            "quote": null,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
+            "freitext": "",
+            "manualResult": null,
+            "voided": false
+          },
+          "score": {
+            "home": null,
+            "away": null,
+            "htHome": null,
+            "htAway": null
+          }
+        },
+        {
+          "rank": 9,
+          "player": "Thomas",
+          "home": "Borussia Mönchengladbach",
+          "away": "TSG Hoffenheim",
+          "bet": {
+            "type": "",
+            "selection": "",
+            "quote": null,
+            "line": 2.5,
+            "hcTeam": "Heim",
+            "hcValue": -1,
+            "ouSelection": "",
             "freitext": "",
             "manualResult": null,
             "voided": false
