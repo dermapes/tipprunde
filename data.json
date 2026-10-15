@@ -869,8 +869,8 @@
           "away": "Hamburger SV",
           "bet": {
             "type": "1x2",
-            "selection": "Heim",
-            "quote": 1.4,
+            "selection": "Auswärts",
+            "quote": "6.7",
             "line": 2.5,
             "hcTeam": "Heim",
             "hcValue": -1,
