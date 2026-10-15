@@ -9,6 +9,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0F1417" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #0F1417;
@@ -109,7 +111,7 @@
       border: 1px solid var(--line);
       border-radius: 8px;
       padding: 8px 12px;
-      font-family: monospace;
+      font-family: 'Space Mono', monospace;
       font-size: 14px;
     }
 
@@ -150,7 +152,7 @@
     }
 
     .rank-badge {
-      font-family: monospace;
+      font-family: 'Space Mono', monospace;
       font-size: 11px;
       color: var(--muted);
       background: var(--bg-elevated);
@@ -204,7 +206,7 @@
     }
 
     .score-disp {
-      font-family: monospace;
+      font-family: 'Space Mono', monospace;
       font-size: 20px;
       font-weight: 700;
     }
@@ -275,7 +277,7 @@
     }
 
     .summary-item .val {
-      font-family: monospace;
+      font-family: 'Space Mono', monospace;
       font-weight: 700;
       font-size: 16px;
       margin-top: 2px;
@@ -331,7 +333,7 @@
     }
 
     table.season td.total {
-      font-family: monospace;
+      font-family: 'Space Mono', monospace;
       font-weight: 700;
       background: var(--card);
     }
@@ -359,6 +361,104 @@
       color: var(--muted);
       margin-bottom: 14px;
     }
+    .chart-box {
+      position: relative;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+
+    .chart-box h3 {
+      margin: 0 0 4px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .chart-box .chart-hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .chart-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 11px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .legend-item.off {
+      opacity: 0.35;
+    }
+
+    .legend-item .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .legend-item .lv {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .chart-tip {
+      position: absolute;
+      display: none;
+      pointer-events: none;
+      z-index: 5;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 12px;
+      white-space: nowrap;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    }
+
+    .chart-tip .tn {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.03em;
+    }
+
+    .chart-tip .ts {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .chart-tip .tv {
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      font-size: 14px;
+      margin-top: 2px;
+    }
   </style>
 </head>
 <body>
@@ -375,8 +475,8 @@
       btts: 'Beide treffen',
       hc: 'Handicap',
       htft: 'HZ/Endstand',
-      free: 'Freitext',
-      wuo: 'Wette'
+      wuo: 'Wer gewinnt & Ü/U',
+      free: 'Freitext'
     };
     const SEASON_BET_TYPES = {
       meister: 'Deutscher Meister',
@@ -419,9 +519,9 @@
       const b = game.bet || {};
       const s = game.score || {};
 
-      if (b.voided === true) return 'voided';
-      if (b.type === 'free') return b.manualResult;
-      if (s.home === null || s.home === '' || s.away === null || s.away === '') return null;
+      if (b.voided) return 'void';
+      if (b.type === 'free') return b.manualResult || null;
+      if (s.home === null || s.away === null || s.home === undefined || s.away === undefined || s.home === '' || s.away === '') return null;
 
       const h = Number(s.home);
       const a = Number(s.away);
@@ -448,6 +548,7 @@
         if (total === line) return null;
         if (b.selection === 'Über') return total > line ? 'win' : 'loss';
         if (b.selection === 'Unter') return total < line ? 'win' : 'loss';
+        return null;
       }
 
       if (b.type === 'btts') {
@@ -457,24 +558,29 @@
 
       if (b.type === 'hc') {
         const val = Number(b.hcValue);
-        let adjH = h;
-        let adjA = a;
-
-        if (b.hcTeam === 'Heim') adjH += val;
-        else adjA += val;
-
-        if (adjH === adjA) return null;
-        const winner = adjH > adjA ? 'Heim' : 'Auswärts';
-        return b.selection === winner ? 'win' : 'loss';
+        let adjH = h, adjA = a;
+        if (b.hcTeam === 'Auswärts') adjA += val; else adjH += val; // bei "Unentschieden" gilt das Handicap für Heim
+        const out = adjH > adjA ? 'Heim' : (adjH < adjA ? 'Auswärts' : 'Unentschieden');
+        return out === b.hcTeam ? 'win' : 'loss';
       }
 
       if (b.type === 'htft') {
-        if (s.htHome === null || s.htHome === '' || s.htAway === null || s.htAway === '') return null;
-        const hh = Number(s.htHome);
-        const ha = Number(s.htAway);
-        const htOut = hh > ha ? 'Heim' : (hh < ha ? 'Auswärts' : 'Unentschieden');
-        const ftOut = h > a ? 'Heim' : (h < a ? 'Auswärts' : 'Unentschieden');
-        return (b.selection || '').includes(htOut) && (b.selection || '').includes(ftOut) ? 'win' : 'loss';
+        if (s.htHome === null || s.htAway === null || s.htHome === undefined || s.htAway === undefined || s.htHome === '' || s.htAway === '') return null;
+        const hh = Number(s.htHome), ha = Number(s.htAway);
+        const htOut = hh > ha ? 'Heim' : (hh < ha ? 'Auswärts' : 'X');
+        const ftOut = h > a ? 'Heim' : (h < a ? 'Auswärts' : 'X');
+        return b.selection === (htOut + '/' + ftOut) ? 'win' : 'loss';
+      }
+
+      if (b.type === 'wuo') {
+        const out = h > a ? 'Heim' : (h < a ? 'Auswärts' : 'Unentschieden');
+        const total = h + a;
+        const line = Number(b.line);
+        if (total === line) return null;
+        if (!b.ouSelection) return null;
+        const totalWin = b.ouSelection === 'Über' ? total > line : total < line;
+        const outcomeWin = b.selection === out;
+        return (outcomeWin && totalWin) ? 'win' : 'loss';
       }
 
       return null;
@@ -482,7 +588,7 @@
 
     function gameProfit(game) {
       const result = computeResult(game);
-      if (result === 'voided') return 0;
+      if (result === 'void') return 0;
       if (result === 'win') {
         const q = Number(game.bet.quote);
         if (!q) return null;
@@ -495,16 +601,18 @@
     function matchdayTotals(matchday) {
       const totals = {};
       BASE_ORDER.forEach(player => totals[player] = 0);
+      let allDone = true;
       matchday.games.forEach(game => {
         const profit = gameProfit(game);
-        if (profit !== null) totals[game.player] += profit;
+        if (profit === null) allDone = false;
+        else totals[game.player] += profit;
       });
-      return totals;
+      return { totals, allDone };
     }
 
     function seasonBetProfit(bet) {
       if (!bet) return null;
-      if (bet.voided === true) return 0;
+      if (bet.voided) return 0;
       if (!bet.manualResult) return null;
       if (bet.manualResult === 'win') {
         const q = Number(bet.quote);
@@ -521,7 +629,7 @@
       BASE_ORDER.forEach(player => totals[player] = 0);
 
       state.matchdays.forEach(matchday => {
-        const current = matchdayTotals(matchday);
+        const current = matchdayTotals(matchday).totals;
         perMd.push(current);
         BASE_ORDER.forEach(player => totals[player] += current[player]);
       });
@@ -540,9 +648,14 @@
       if (!b.type) return 'Noch keine Wette eingetragen';
       const label = BET_TYPES[b.type] || b.type;
       if (b.type === 'free') return (b.freitext || '—') + ' · ' + label;
-      if (b.type === 'ou') return label + ' ' + b.line + ' · ' + b.selection;
-      if (b.type === 'hc') return label + ' ' + b.hcTeam + ' ' + b.hcValue;
-      return label + ' · ' + b.selection;
+      if (b.type === 'ou') return label + ' ' + b.line + ' · ' + (b.selection || '—');
+      if (b.type === 'hc') return label + ' · ' + (b.hcTeam || '—') + ' ' + b.hcValue;
+      if (b.type === 'wuo') return label + ' · ' + (b.selection || '—') + ' & ' + (b.ouSelection || '—') + ' ' + b.line;
+      return label + ' · ' + (b.selection || '—');
+    }
+
+    function fmtScoreVal(v) {
+      return (v === null || v === undefined || v === '') ? '–' : String(v);
     }
 
     function renderHeader() {
@@ -578,15 +691,19 @@
       const body = el('div', { class: 'game-body' });
       const left = el('div', {});
       left.appendChild(el('div', { class: 'bet-desc' }, [betDescription(game)]));
-      if (game.bet && game.bet.type && game.bet.type !== 'free' && game.bet.quote) {
+      if (game.bet && game.bet.type && game.bet.quote) {
         left.appendChild(el('div', { class: 'bet-desc' }, ['Quote: ', el('b', {}, [String(game.bet.quote)])]));
       }
       body.appendChild(left);
 
       const score = game.score || {};
-      body.appendChild(el('div', { class: 'score-disp' }, [
-        ((score.home ?? '–') + ' : ' + (score.away ?? '–'))
-      ]));
+      const scoreBox = el('div', {}, [
+        el('div', { class: 'score-disp' }, [fmtScoreVal(score.home) + ' : ' + fmtScoreVal(score.away)])
+      ]);
+      if (game.bet && game.bet.type === 'htft') {
+        scoreBox.appendChild(el('div', { class: 'bet-desc' }, ['HZ ' + fmtScoreVal(score.htHome) + ' : ' + fmtScoreVal(score.htAway)]));
+      }
+      body.appendChild(scoreBox);
 
       const result = computeResult(game);
       const profit = gameProfit(game);
@@ -599,9 +716,9 @@
       } else if (result === 'loss') {
         pillClass = 'result-loss';
         label = 'Verloren · ' + fmtEuro(profit);
-      } else if (result === 'voided') {
+      } else if (result === 'void') {
         pillClass = 'result-voided';
-        label = 'Storniert · 0,00 €';
+        label = 'Annulliert · ' + fmtEuro(profit);
       }
 
       body.appendChild(el('div', { class: 'result-pill ' + pillClass }, [label]));
@@ -610,9 +727,9 @@
     }
 
     function renderMatchdaySummary(matchday) {
-      const totals = matchdayTotals(matchday);
+      const { totals, allDone } = matchdayTotals(matchday);
       const box = el('div', { class: 'summary' });
-      box.appendChild(el('h3', {}, ['Spieltag ' + matchday.nr]));
+      box.appendChild(el('h3', {}, ['Spieltag ' + matchday.nr + (allDone ? ' · abgeschlossen' : ' · läuft noch')]));
       const grid = el('div', { class: 'summary-grid' });
       BASE_ORDER.forEach(player => {
         const value = totals[player];
@@ -668,9 +785,9 @@
         let pillClass = 'result-pending';
         let resLabel = 'Offen';
 
-        if (bet.voided === true) {
+        if (bet.voided) {
           pillClass = 'result-voided';
-          resLabel = 'Storniert · 0,00 €';
+          resLabel = 'Annulliert · ' + fmtEuro(profit);
         } else if (bet.manualResult === 'win') {
           pillClass = 'result-win';
           resLabel = 'Gewonnen · ' + fmtEuro(profit);
@@ -687,6 +804,148 @@
       return wrap;
     }
 
+    const PLAYER_COLORS = {
+      Tino: '#FFB238',
+      Spani: '#3FA35A',
+      Muc: '#4DA3FF',
+      Julian: '#E4572E',
+      Malte: '#B57BFF',
+      Markus: '#2EC4B6',
+      Michi: '#FF6FA5',
+      Thomas: '#C9D26B'
+    };
+    const hiddenPlayers = new Set();
+
+    function svgEl(tag, attrs, text) {
+      const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      Object.keys(attrs || {}).forEach(k => e.setAttribute(k, attrs[k]));
+      if (text != null) e.textContent = text;
+      return e;
+    }
+
+    function niceStep(range, targetTicks) {
+      const raw = range / targetTicks;
+      const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+      const f = raw / pow;
+      const nf = f <= 1 ? 1 : (f <= 2 ? 2 : (f <= 5 ? 5 : 10));
+      return nf * pow;
+    }
+
+    function fmtAxis(v, step) {
+      const txt = (step < 1 ? v.toFixed(2) : String(Math.round(v))).replace('.', ',');
+      return txt + ' €';
+    }
+
+    function showChartTip(box, tip, target, color, player, mdNr, value) {
+      tip.innerHTML = '';
+      tip.appendChild(el('div', { class: 'tn', style: 'color:' + color }, [player]));
+      tip.appendChild(el('div', { class: 'ts' }, ['nach Spieltag ' + mdNr]));
+      tip.appendChild(el('div', { class: 'tv ' + (value > 0 ? 'pos' : (value < 0 ? 'neg' : 'zero')) }, [fmtEuro(value)]));
+      tip.style.display = 'block';
+      const b = box.getBoundingClientRect();
+      const r = target.getBoundingClientRect();
+      const cx = r.left + r.width / 2 - b.left;
+      const cy = r.top + r.height / 2 - b.top;
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      let left = cx - tw / 2;
+      left = Math.max(4, Math.min(left, b.width - tw - 4));
+      let top = cy - th - 14;
+      if (top < 4) top = cy + 14;
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+    }
+
+    function renderSeasonChart(perMd) {
+      const box = el('div', { class: 'chart-box' });
+      box.appendChild(el('h3', {}, ['Verlauf der Gesamtsumme']));
+      box.appendChild(el('div', { class: 'chart-hint' }, ['Kumulierter Stand je Spieltag (ohne Saisonwetten). Namen unten antippen, um Spieler ein-/auszublenden.']));
+
+      const n = perMd.length;
+      const series = {};
+      BASE_ORDER.forEach(player => {
+        let sum = 0;
+        const pts = [0];
+        perMd.forEach(t => {
+          sum += t[player];
+          pts.push(Math.round(sum * 100) / 100);
+        });
+        series[player] = pts;
+      });
+
+      let visible = BASE_ORDER.filter(p => !hiddenPlayers.has(p));
+      const scaleSet = visible.length ? visible : BASE_ORDER;
+      let min = 0, max = 0;
+      scaleSet.forEach(p => series[p].forEach(v => { if (v < min) min = v; if (v > max) max = v; }));
+      if (max - min < 1) max = min + 1;
+      const step = niceStep(max - min, 5);
+      const yMin = Math.floor(min / step) * step;
+      const yMax = Math.ceil(max / step) * step;
+
+      const W = 720, H = 360, ml = 62, mr = 16, mt = 14, mb = 30;
+      const xAt = i => ml + (n === 0 ? 0 : i * (W - ml - mr) / n);
+      const yAt = v => mt + (yMax - v) * (H - mt - mb) / (yMax - yMin);
+
+      const svg = svgEl('svg', { class: 'chart-svg', viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Verlauf der Gesamtsumme pro Spieltag' });
+
+      for (let v = yMin; v <= yMax + step / 2; v += step) {
+        const y = yAt(v);
+        const isZero = Math.abs(v) < step / 1000;
+        svg.appendChild(svgEl('line', { x1: ml, x2: W - mr, y1: y, y2: y, stroke: isZero ? '#586570' : '#2A343B', 'stroke-width': isZero ? 1.5 : 1 }));
+        svg.appendChild(svgEl('text', { x: ml - 8, y: y + 4, 'text-anchor': 'end', fill: '#8B9AA3', 'font-size': 11, 'font-family': 'Space Mono, monospace' }, fmtAxis(isZero ? 0 : v, step)));
+      }
+
+      const every = Math.max(1, Math.ceil(n / 17));
+      for (let i = 1; i <= n; i++) {
+        if (i % every !== 0 && i !== n && i !== 1) continue;
+        svg.appendChild(svgEl('text', { x: xAt(i), y: H - 9, 'text-anchor': 'middle', fill: '#8B9AA3', 'font-size': 11, 'font-family': 'Space Mono, monospace' }, 'ST ' + state.matchdays[i - 1].nr));
+      }
+
+      const tip = el('div', { class: 'chart-tip' });
+      document.addEventListener('click', () => { tip.style.display = 'none'; });
+
+      visible.forEach(player => {
+        const color = PLAYER_COLORS[player] || '#EEF1F0';
+        const pts = series[player];
+        const path = pts.map((v, i) => (i === 0 ? 'M' : 'L') + xAt(i).toFixed(1) + ' ' + yAt(v).toFixed(1)).join(' ');
+        svg.appendChild(svgEl('path', { d: path, fill: 'none', stroke: color, 'stroke-width': 2.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+        pts.forEach((v, i) => {
+          if (i === 0) return;
+          const cx = xAt(i), cy = yAt(v);
+          svg.appendChild(svgEl('circle', { cx, cy, r: i === n ? 4.5 : 3, fill: color, stroke: '#151B1F', 'stroke-width': 1.5, 'pointer-events': 'none' }));
+          const hit = svgEl('circle', { cx, cy, r: 11, fill: 'transparent', style: 'cursor:pointer;' });
+          const show = () => showChartTip(box, tip, hit, color, player, state.matchdays[i - 1].nr, v);
+          hit.addEventListener('pointerenter', show);
+          hit.addEventListener('pointermove', show);
+          hit.addEventListener('pointerleave', () => { tip.style.display = 'none'; });
+          hit.addEventListener('click', (ev) => { ev.stopPropagation(); show(); });
+          svg.appendChild(hit);
+        });
+      });
+
+      box.appendChild(svg);
+      box.appendChild(tip);
+
+      const legend = el('div', { class: 'chart-legend' });
+      BASE_ORDER.slice().sort((a, b) => series[b][n] - series[a][n]).forEach(player => {
+        const off = hiddenPlayers.has(player);
+        legend.appendChild(el('button', {
+          class: 'legend-item' + (off ? ' off' : ''),
+          onclick: () => {
+            if (hiddenPlayers.has(player)) hiddenPlayers.delete(player); else hiddenPlayers.add(player);
+            const y = window.scrollY;
+            render();
+            window.scrollTo(0, y);
+          }
+        }, [
+          el('span', { class: 'dot', style: 'background:' + (PLAYER_COLORS[player] || '#EEF1F0') }),
+          el('span', {}, [player]),
+          el('span', { class: 'lv' }, [fmtEuro(series[player][n])])
+        ]));
+      });
+      box.appendChild(legend);
+      return box;
+    }
+
     function renderSeasonView() {
       const wrap = el('div', {});
       if (!state.matchdays.length) {
@@ -696,6 +955,7 @@
 
       const { totals, perMd, sb } = seasonTotals();
       const ranked = BASE_ORDER.slice().sort((a, b) => totals[b] - totals[a]);
+      wrap.appendChild(renderSeasonChart(perMd));
       const tableWrap = el('div', { class: 'table-wrap' });
       const table = el('table', { class: 'season' });
 
