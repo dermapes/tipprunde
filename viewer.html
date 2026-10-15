@@ -459,6 +459,51 @@
       font-size: 14px;
       margin-top: 2px;
     }
+    .live-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--loss);
+      background: var(--loss-soft);
+      border: 1px solid var(--loss);
+      border-radius: 6px;
+      padding: 3px 7px;
+      animation: livepulse 1.6s ease-in-out infinite;
+    }
+
+    @keyframes livepulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+
+    .result-live {
+      outline: 1px dashed var(--accent);
+      outline-offset: -1px;
+    }
+
+    .live-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      margin: -8px 0 16px 2px;
+      flex-wrap: wrap;
+    }
+
+    .live-bar .live-on { color: var(--loss); font-weight: 600; }
+    .live-bar .live-err { color: var(--loss); }
+
+    .live-bar button {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -606,6 +651,7 @@
         const profit = gameProfit(game);
         if (profit === null) allDone = false;
         else totals[game.player] += profit;
+        if (game.liveState === 'live') allDone = false;
       });
       return { totals, allDone };
     }
@@ -679,6 +725,7 @@
       const head = el('div', { class: 'game-head' }, [
         el('span', { class: 'rank-badge' }, ['#' + game.rank]),
         game.rank === 1 ? el('span', { class: 'rank-badge', style: 'color:var(--accent);border-color:var(--accent-soft);' }, ['Bonus · kostenlos']) : null,
+        game.liveState === 'live' ? el('span', { class: 'live-badge' }, ['● LIVE']) : null,
         el('div', { class: 'teams' }, [
           el('span', {}, [game.home || '?']),
           el('span', { class: 'vs' }, ['–']),
@@ -707,21 +754,22 @@
 
       const result = computeResult(game);
       const profit = gameProfit(game);
+      const isLive = game.liveState === 'live';
       let pillClass = 'result-pending';
       let label = 'Offen';
 
       if (result === 'win') {
         pillClass = 'result-win';
-        label = 'Gewonnen · ' + fmtEuro(profit);
+        label = (isLive ? 'Aktuell gewonnen · ' : 'Gewonnen · ') + fmtEuro(profit);
       } else if (result === 'loss') {
         pillClass = 'result-loss';
-        label = 'Verloren · ' + fmtEuro(profit);
+        label = (isLive ? 'Aktuell verloren · ' : 'Verloren · ') + fmtEuro(profit);
       } else if (result === 'void') {
         pillClass = 'result-voided';
         label = 'Annulliert · ' + fmtEuro(profit);
       }
 
-      body.appendChild(el('div', { class: 'result-pill ' + pillClass }, [label]));
+      body.appendChild(el('div', { class: 'result-pill ' + pillClass + (isLive ? ' result-live' : '') }, [label]));
       card.appendChild(body);
       return card;
     }
@@ -761,6 +809,7 @@
       });
       nav.appendChild(select);
       wrap.appendChild(nav);
+      if (currentMdIndex === liveMatchdayIndex()) wrap.appendChild(renderLiveBar());
 
       matchday.games.forEach(game => wrap.appendChild(renderGame(game)));
       wrap.appendChild(renderMatchdaySummary(matchday));
@@ -858,7 +907,7 @@
     function renderSeasonChart(perMd) {
       const box = el('div', { class: 'chart-box' });
       box.appendChild(el('h3', {}, ['Verlauf der Gesamtsumme']));
-      box.appendChild(el('div', { class: 'chart-hint' }, ['Kumulierter Stand je Spieltag (ohne Saisonwetten). Namen unten antippen, um Spieler ein-/auszublenden.']));
+      box.appendChild(el('div', { class: 'chart-hint' }, ['Kumulierter Stand je Spieltag (ohne Saisonwetten)' + (liveInfo.liveCount > 0 ? ', laufende Spiele live eingerechnet' : '') + '. Namen unten antippen, um Spieler ein-/auszublenden.']));
 
       const n = perMd.length;
       const series = {};
@@ -990,6 +1039,166 @@
       return wrap;
     }
 
+    // ---------- Live-Ergebnisse (OpenLigaDB) ----------
+    const LIVE_WINDOW_MS = 3 * 60 * 60 * 1000;
+    let liveInfo = { updated: null, liveCount: 0, error: '' };
+    let liveTimer = null;
+    let liveBusy = false;
+    let liveSig = '';
+
+    function normalizeTeam(str) {
+      if (!str) return '';
+      const stripWords = ['1', 'fc', 'sv', 'sc', 'tsg', 'vfb', 'vfl', 'fsv', 'borussia', 'sg', 'spvgg', '04', '05', '07', '1899', 'ev'];
+      const norm = str.toLowerCase().replace(/[.,]/g, ' ');
+      return norm.split(/\s+/).filter(w => w && !stripWords.includes(w)).join(' ').trim();
+    }
+
+    function teamsMatch(a, b) {
+      const na = normalizeTeam(a), nb = normalizeTeam(b);
+      if (!na || !nb) return false;
+      return na === nb || na.includes(nb) || nb.includes(na);
+    }
+
+    function liveMatchdayIndex() {
+      const i = state ? state.matchdays.length - 1 : -1;
+      return (i >= 0 && !state.matchdays[i].closed) ? i : -1;
+    }
+
+    function parseApiMatch(m) {
+      const now = Date.now();
+      let kick = NaN;
+      if (m.matchDateTimeUTC) {
+        const t = String(m.matchDateTimeUTC);
+        kick = Date.parse(/(Z|[+-]\d\d:?\d\d)$/.test(t) ? t : t + 'Z');
+      }
+      const goals = Array.isArray(m.goals) ? m.goals : [];
+      const results = Array.isArray(m.matchResults) ? m.matchResults : [];
+      const finished = m.matchIsFinished === true;
+      const started = finished || (!isNaN(kick) && now >= kick);
+      if (!started) return { kick, started: false };
+
+      const age = isNaN(kick) ? 0 : now - kick;
+      const status = (finished || age > LIVE_WINDOW_MS) ? 'finished' : 'live';
+
+      let h = 0, a = 0;
+      const fin = results.find(r => r.resultTypeID === 2);
+      if (finished && fin) {
+        h = fin.pointsTeam1; a = fin.pointsTeam2;
+      } else if (goals.length) {
+        const best = goals.reduce((x, g) => (g.scoreTeam1 + g.scoreTeam2 > x.scoreTeam1 + x.scoreTeam2) ? g : x);
+        h = best.scoreTeam1; a = best.scoreTeam2;
+      } else if (finished && results.length) {
+        const last = results[results.length - 1];
+        h = last.pointsTeam1; a = last.pointsTeam2;
+      }
+
+      let hh = null, ha = null;
+      const ht = results.find(r => r.resultTypeID === 1);
+      if (ht) {
+        hh = ht.pointsTeam1; ha = ht.pointsTeam2;
+      } else if (finished || age >= 55 * 60000) {
+        hh = 0; ha = 0;
+        goals.forEach(g => {
+          if (g.matchMinute != null && g.matchMinute <= 45 && g.scoreTeam1 + g.scoreTeam2 > hh + ha) {
+            hh = g.scoreTeam1; ha = g.scoreTeam2;
+          }
+        });
+      }
+      return { kick, started: true, status, home: h, away: a, htHome: hh, htAway: ha };
+    }
+
+    function liveStatusText() {
+      const time = t => t.toLocaleTimeString('de-DE');
+      if (liveInfo.error) return '⚠ Live-Daten nicht erreichbar (' + liveInfo.error + ')' + (liveInfo.updated ? ' · letzter Stand ' + time(liveInfo.updated) : '');
+      if (!liveInfo.updated) return 'Lade Live-Ergebnisse…';
+      return (liveInfo.liveCount > 0
+        ? '● ' + liveInfo.liveCount + (liveInfo.liveCount === 1 ? ' Spiel läuft' : ' Spiele laufen') + ' – Stand wird live berechnet'
+        : 'Keine laufenden Spiele') + ' · aktualisiert ' + time(liveInfo.updated);
+    }
+
+    function renderLiveBar() {
+      const bar = el('div', { class: 'live-bar' });
+      const span = el('span', { id: 'live-status-text', class: liveInfo.error ? 'live-err' : (liveInfo.liveCount > 0 ? 'live-on' : '') }, [liveStatusText()]);
+      bar.appendChild(span);
+      bar.appendChild(el('button', { onclick: () => pollLive() }, ['↻ Jetzt aktualisieren']));
+      return bar;
+    }
+
+    function updateLiveBar() {
+      const span = document.getElementById('live-status-text');
+      if (!span) return;
+      span.textContent = liveStatusText();
+      span.className = liveInfo.error ? 'live-err' : (liveInfo.liveCount > 0 ? 'live-on' : '');
+    }
+
+    async function pollLive() {
+      const idx = liveMatchdayIndex();
+      if (idx < 0 || liveBusy) return;
+      liveBusy = true;
+      const md = state.matchdays[idx];
+      try {
+        const url = 'https://api.openligadb.de/getmatchdata/bl1/' + (state.seasonYear || 2026) + '/' + md.nr;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (!Array.isArray(data) || !data.length) throw new Error('keine Daten');
+
+        let matched = 0, liveCount = 0;
+        data.forEach(m => {
+          const homeApi = m.team1 && m.team1.teamName;
+          const awayApi = m.team2 && m.team2.teamName;
+          if (!homeApi || !awayApi) return;
+          const g = md.games.find(gm => teamsMatch(gm.home, homeApi) && teamsMatch(gm.away, awayApi));
+          if (!g) return;
+          matched++;
+          const p = parseApiMatch(m);
+          g.kickoff = p.kick;
+          if (!p.started) { g.liveState = null; return; }
+          g.score = g.score || {};
+          g.score.home = p.home;
+          g.score.away = p.away;
+          if (p.htHome != null) { g.score.htHome = p.htHome; g.score.htAway = p.htAway; }
+          g.liveState = p.status === 'live' ? 'live' : null;
+          if (g.liveState === 'live') liveCount++;
+        });
+        if (!matched) throw new Error('keine passenden Paarungen');
+
+        liveInfo = { updated: new Date(), liveCount, error: '' };
+        const sig = JSON.stringify(md.games.map(g => [g.score, g.liveState]));
+        if (sig !== liveSig) {
+          liveSig = sig;
+          const y = window.scrollY;
+          render();
+          window.scrollTo(0, y);
+        } else {
+          updateLiveBar();
+        }
+      } catch (err) {
+        console.warn('Live-Abruf fehlgeschlagen:', err);
+        liveInfo.error = err.message || String(err);
+        updateLiveBar();
+      } finally {
+        liveBusy = false;
+        scheduleLive();
+      }
+    }
+
+    function scheduleLive() {
+      clearTimeout(liveTimer);
+      const idx = liveMatchdayIndex();
+      if (idx < 0) return;
+      const now = Date.now();
+      let delay = 5 * 60 * 1000;
+      if (liveInfo.liveCount > 0) delay = 30 * 1000;
+      else if (state.matchdays[idx].games.some(g => g.kickoff && g.kickoff > now && g.kickoff - now < 10 * 60000)) delay = 60 * 1000;
+      liveTimer = setTimeout(pollLive, delay);
+    }
+
+    function startLive() {
+      pollLive();
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) pollLive(); });
+    }
+
     function render() {
       const app = document.getElementById('app');
       app.innerHTML = '';
@@ -1015,6 +1224,7 @@
         state = data;
         currentMdIndex = Math.max(0, state.matchdays.length - 1);
         render();
+        startLive();
       } catch (error) {
         console.error('Viewer konnte nicht geladen werden:', error);
         app.innerHTML = '';
